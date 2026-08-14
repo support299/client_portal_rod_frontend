@@ -6,6 +6,7 @@ import QuickActions from '../components/QuickActions'
 import StatusTracker from '../components/StatusTracker'
 import UrgentAction from '../components/UrgentAction'
 import StatCards from '../components/StatCards'
+import DealHealthBadge from '../components/DealHealthBadge'
 import AssignedOfficer from '../components/AssignedOfficer'
 import RecentActivity from '../components/RecentActivity'
 import SectionPage from '../components/SectionPage'
@@ -49,8 +50,9 @@ export default function Dashboard() {
                 <QuickActions onNavigate={setActiveSection} />
               </div>
 
-              <div className="mt-4">
+              <div className="mt-4 flex flex-wrap items-center gap-3">
                 <PropertySelector selected={selectedProperty} onChange={setSelectedProperty} />
+                <DealHealthBadge health={selectedProperty.health} />
               </div>
 
               <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">

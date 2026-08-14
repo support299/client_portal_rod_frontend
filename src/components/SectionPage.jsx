@@ -1,8 +1,7 @@
-import { ArrowLeft, Upload, Download, Send, Construction, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Send, Construction, ChevronRight } from 'lucide-react'
 import { getSection } from '../data/sections'
 import {
-  documentsList,
-  loanTerms,
+  loanSummaries,
   messageThread,
   upcomingEvents,
   assignedOfficer,
@@ -10,6 +9,14 @@ import {
   loanStatusStyles,
   dealTimeline,
 } from '../data/dashboardData'
+import DealHealthBadge from './DealHealthBadge'
+import ProfileSection from './ProfileSection'
+import DrawRequestsSection from './DrawRequestsSection'
+import ConditionsSection from './ConditionsSection'
+import DocumentCenterSection from './DocumentCenterSection'
+import MarketToolsSection from './MarketToolsSection'
+import TeamSection from './TeamSection'
+import ResourceCenterSection from './ResourceCenterSection'
 
 function SectionHeader({ label, subtitle, onBack }) {
   return (
@@ -46,11 +53,14 @@ function MyLoansSection({ onSelectLoan }) {
               <div className="flex items-center gap-3">
                 <div>
                   <p className="text-sm font-semibold text-slate-900">{loan.address}</p>
-                  <span
-                    className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${loanStatusStyles[loan.status]}`}
-                  >
-                    {loan.status}
-                  </span>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <span
+                      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${loanStatusStyles[loan.status]}`}
+                    >
+                      {loan.status}
+                    </span>
+                    <DealHealthBadge health={loan.health} size="sm" />
+                  </div>
                 </div>
               </div>
 
@@ -99,66 +109,42 @@ function DealTimelineSection() {
   )
 }
 
-function DocumentsSection() {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-base font-semibold text-slate-900">Loan Documents</h2>
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
-        >
-          <Upload className="h-4 w-4" />
-          Upload New
-        </button>
-      </div>
-
-      <ul className="mt-4 divide-y divide-slate-100">
-        {documentsList.map((doc) => (
-          <li key={doc.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-            <div>
-              <p className="text-sm font-semibold text-slate-900">{doc.name}</p>
-              <p className="text-xs text-slate-400">Updated {doc.updated}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                  doc.status === 'Approved'
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : doc.status === 'Missing'
-                      ? 'bg-red-100 text-red-700'
-                      : 'bg-amber-100 text-amber-800'
-                }`}
-              >
-                {doc.status}
-              </span>
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                aria-label={`Download ${doc.name}`}
-              >
-                <Download className="h-4 w-4" />
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
 function LoanSummarySection() {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-      <h2 className="text-base font-semibold text-slate-900">Loan Terms</h2>
-      <dl className="mt-4 divide-y divide-slate-100">
-        {loanTerms.map((term) => (
-          <div key={term.label} className="flex items-center justify-between gap-3 py-3">
-            <dt className="text-sm text-slate-500">{term.label}</dt>
-            <dd className="text-sm font-semibold text-slate-900">{term.value}</dd>
+    <div className="space-y-6">
+      {loanSummaries.map((loan) => {
+        const terms = [
+          { label: 'Loan Amount', value: loan.loanAmount },
+          { label: 'Interest Rate', value: loan.interestRate },
+          { label: 'LTV', value: loan.ltv },
+          { label: 'ARV', value: loan.arv },
+          { label: 'Loan Type', value: loan.loanType },
+          { label: 'Term', value: loan.term },
+          { label: 'Closing Date', value: loan.closingDate },
+          { label: 'Maturity Date', value: loan.maturityDate },
+          { label: 'Monthly Payment', value: loan.monthlyPayment },
+          { label: 'Construction Holdback', value: loan.constructionHoldback },
+        ]
+
+        return (
+          <div key={loan.id} className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+            <h2 className="text-base font-semibold text-slate-900">{loan.loanName}</h2>
+            <p className="text-sm text-slate-400">{loan.address}</p>
+
+            <dl className="mt-4 grid grid-cols-1 gap-x-8 sm:grid-cols-2">
+              {terms.map((term) => (
+                <div
+                  key={term.label}
+                  className="flex items-center justify-between gap-3 border-b border-slate-100 py-3"
+                >
+                  <dt className="text-sm text-slate-500">{term.label}</dt>
+                  <dd className="text-sm font-semibold text-slate-900">{term.value}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
-        ))}
-      </dl>
+        )
+      })}
     </div>
   )
 }
@@ -254,6 +240,13 @@ function ComingSoonSection({ label }) {
 const sectionSubtitles = {
   'my-loans': 'Many investors have multiple deals.',
   'deal-timeline': 'Borrowers love seeing progress.',
+  'draw-requests': 'Huge time saver.',
+  conditions: 'Every lender asks for conditions.',
+  documents: 'Instead of emailing PDFs back and forth.',
+  'loan-summary': 'Simple, investor-friendly overview.',
+  tools: 'Small widgets investors actually use.',
+  'my-team': 'Instead of generic support.',
+  resources: 'Great marketing opportunity.',
 }
 
 export default function SectionPage({ sectionId, onBack, onSelectLoan }) {
@@ -270,7 +263,7 @@ export default function SectionPage({ sectionId, onBack, onSelectLoan }) {
       content = <DealTimelineSection />
       break
     case 'documents':
-      content = <DocumentsSection />
+      content = <DocumentCenterSection />
       break
     case 'loan-summary':
       content = <LoanSummarySection />
@@ -280,6 +273,24 @@ export default function SectionPage({ sectionId, onBack, onSelectLoan }) {
       break
     case 'calendar':
       content = <CalendarSection />
+      break
+    case 'profile':
+      content = <ProfileSection />
+      break
+    case 'draw-requests':
+      content = <DrawRequestsSection />
+      break
+    case 'conditions':
+      content = <ConditionsSection />
+      break
+    case 'tools':
+      content = <MarketToolsSection />
+      break
+    case 'my-team':
+      content = <TeamSection />
+      break
+    case 'resources':
+      content = <ResourceCenterSection />
       break
     default:
       content = <ComingSoonSection label={label} />

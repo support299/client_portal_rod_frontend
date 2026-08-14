@@ -14,6 +14,7 @@ import {
   User,
   Settings,
   Milestone,
+  Users,
 } from 'lucide-react'
 
 export const navSections = [
@@ -24,12 +25,13 @@ export const navSections = [
   { id: 'loan-summary', label: 'Loan Summary', icon: ClipboardList },
   { id: 'draw-requests', label: 'Draw Requests', icon: Banknote },
   { id: 'conditions', label: 'Conditions', icon: ListChecks },
+  { id: 'my-team', label: 'My Team', icon: Users },
   { id: 'messages', label: 'Messages', icon: MessageSquare },
   { id: 'calendar', label: 'Calendar', icon: Calendar },
   { id: 'payments', label: 'Payments', icon: DollarSign },
-  { id: 'resources', label: 'Resources', icon: BookOpen },
+  { id: 'resources', label: 'Resource Center', icon: BookOpen },
   { id: 'referrals', label: 'Referrals', icon: UserPlus },
-  { id: 'tools', label: 'Tools', icon: Wrench },
+  { id: 'tools', label: 'Market Tools', icon: Wrench },
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
