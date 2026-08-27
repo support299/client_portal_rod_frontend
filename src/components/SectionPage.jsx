@@ -3,7 +3,6 @@ import { getSection } from '../data/sections'
 import {
   loanSummaries,
   messageThread,
-  upcomingEvents,
   assignedOfficer,
   properties,
   loanStatusStyles,
@@ -17,6 +16,7 @@ import DocumentCenterSection from './DocumentCenterSection'
 import MarketToolsSection from './MarketToolsSection'
 import TeamSection from './TeamSection'
 import ResourceCenterSection from './ResourceCenterSection'
+import CalendarSection from './CalendarSection'
 
 function SectionHeader({ label, subtitle, onBack }) {
   return (
@@ -203,24 +203,6 @@ function MessagesSection() {
           <Send className="h-4 w-4" />
         </button>
       </form>
-    </div>
-  )
-}
-
-function CalendarSection() {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-      <h2 className="text-base font-semibold text-slate-900">Upcoming Events</h2>
-      <ul className="mt-4 divide-y divide-slate-100">
-        {upcomingEvents.map((event) => (
-          <li key={event.id} className="flex items-center justify-between gap-3 py-3">
-            <p className="text-sm font-semibold text-slate-900">{event.title}</p>
-            <p className="text-sm text-slate-500">
-              {event.date} &middot; {event.time}
-            </p>
-          </li>
-        ))}
-      </ul>
     </div>
   )
 }

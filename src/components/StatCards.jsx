@@ -4,9 +4,8 @@ export default function StatCards({ property }) {
   const stats = [
     { label: 'Loan Amount', value: property.loanAmount, icon: DollarSign },
     { label: 'Rate Lock', value: property.rateLock, icon: Percent },
-    { label: 'Next Payment Date', value: property.nextPaymentDate, icon: CalendarClock },
+    { label: 'Estimated Closing Date', value: property.estimatedEndDate, icon: CalendarClock },
     { label: 'Total Due', value: property.totalDue, icon: Receipt },
-    { label: 'Estimated End Date', value: property.estimatedEndDate, icon: CalendarCheck },
   ]
 
   return (
