@@ -1,4 +1,8 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './common/auth/AuthContext'
+import ProtectedRoute from './common/auth/ProtectedRoute'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
 import Dashboard from './pages/Dashboard'
 import AdminLayout from './pages/AdminLayout'
 import AdminOverview from './components/admin/AdminOverview'
@@ -14,23 +18,45 @@ import UsersSection from './components/admin/UsersSection'
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminOverview />} />
-          <Route path="pipeline" element={<PipelineSection />} />
-          <Route path="tasks" element={<TasksSection />} />
-          <Route path="loans/:loanNumber" element={<LoanDetailSection />} />
-          <Route path="documents" element={<DocumentsSection />} />
-          <Route path="milestones" element={<MilestonesSection />} />
-          <Route path="notes" element={<NotesSection />} />
-          <Route path="crm" element={<CrmSection />} />
-          <Route path="communications" element={<CommunicationsSection />} />
-          <Route path="users" element={<UsersSection />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute staffOnly>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<AdminOverview />} />
+            <Route path="pipeline" element={<PipelineSection />} />
+            <Route path="tasks" element={<TasksSection />} />
+            <Route path="loans/:loanNumber" element={<LoanDetailSection />} />
+            <Route path="documents" element={<DocumentsSection />} />
+            <Route path="milestones" element={<MilestonesSection />} />
+            <Route path="notes" element={<NotesSection />} />
+            <Route path="crm" element={<CrmSection />} />
+            <Route path="communications" element={<CommunicationsSection />} />
+            <Route path="users" element={<UsersSection />} />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 

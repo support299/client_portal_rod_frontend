@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import AdminSidebar from '../components/admin/AdminSidebar'
 import AdminTopbar from '../components/admin/AdminTopbar'
-import { adminNavSections, adminSectionSubtitles } from '../data/adminSections'
+import { adminNavSections, adminSectionSubtitles } from '../common/constants/adminNav'
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)

@@ -1,5 +1,5 @@
 import { Landmark, Plus, X } from 'lucide-react'
-import { navSections } from '../data/sections'
+import { navSections } from '../common/constants/nav'
 
 function SidebarContent({ activeSection, onSelect }) {
   return (

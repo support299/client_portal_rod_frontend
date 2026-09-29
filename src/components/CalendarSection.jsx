@@ -1,11 +1,5 @@
 import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import {
-  upcomingEvents,
-  properties,
-  loanSummaries,
-  insuranceCertificates,
-} from '../data/dashboardData'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -52,7 +46,12 @@ function getMonthGrid(monthDate) {
   })
 }
 
-function buildCalendarEvents() {
+function buildCalendarEvents({
+  upcomingEvents = [],
+  properties = [],
+  loanSummaries = [],
+  insuranceCertificates = [],
+}) {
   const raw = [
     ...upcomingEvents.map((e) => ({
       id: `event-${e.id}`,
@@ -98,21 +97,39 @@ function buildCalendarEvents() {
     .filter((evt) => evt.parsedDate !== null)
 }
 
-const calendarEvents = buildCalendarEvents()
-
-const eventsByDay = calendarEvents.reduce((map, evt) => {
-  const key = dayKey(evt.parsedDate)
-  if (!map.has(key)) map.set(key, [])
-  map.get(key).push(evt)
-  return map
-}, new Map())
-
-export default function CalendarSection() {
+export default function CalendarSection({
+  upcomingEvents = [],
+  properties = [],
+  loanSummaries = [],
+  insuranceCertificates = [],
+}) {
   const today = useMemo(() => new Date(), [])
   const [visibleMonth, setVisibleMonth] = useState(
     () => new Date(today.getFullYear(), today.getMonth(), 1),
   )
   const [selectedDate, setSelectedDate] = useState(today)
+
+  const calendarEvents = useMemo(
+    () =>
+      buildCalendarEvents({
+        upcomingEvents,
+        properties,
+        loanSummaries,
+        insuranceCertificates,
+      }),
+    [upcomingEvents, properties, loanSummaries, insuranceCertificates],
+  )
+
+  const eventsByDay = useMemo(
+    () =>
+      calendarEvents.reduce((map, evt) => {
+        const key = dayKey(evt.parsedDate)
+        if (!map.has(key)) map.set(key, [])
+        map.get(key).push(evt)
+        return map
+      }, new Map()),
+    [calendarEvents],
+  )
 
   const cells = useMemo(() => getMonthGrid(visibleMonth), [visibleMonth])
   const selectedEvents = eventsByDay.get(dayKey(selectedDate)) ?? []
@@ -244,14 +261,18 @@ export default function CalendarSection() {
           <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
             Upcoming
           </h3>
-          <ul className="mt-3 space-y-3">
-            {upcomingEvents.map((evt) => (
-              <li key={evt.id} className="flex items-center justify-between gap-3">
-                <p className="text-sm text-slate-700">{evt.title}</p>
-                <p className="text-xs text-slate-400">{evt.date}</p>
-              </li>
-            ))}
-          </ul>
+          {upcomingEvents.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-400">Nothing scheduled yet.</p>
+          ) : (
+            <ul className="mt-3 space-y-3">
+              {upcomingEvents.map((evt) => (
+                <li key={evt.id} className="flex items-center justify-between gap-3">
+                  <p className="text-sm text-slate-700">{evt.title}</p>
+                  <p className="text-xs text-slate-400">{evt.date}</p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>

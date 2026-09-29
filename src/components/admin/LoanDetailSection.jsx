@@ -1,15 +1,13 @@
 import { useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, FileText, AlertTriangle, Paperclip, Share2, HardHat } from 'lucide-react'
-import {
-  pipelineLoans,
-  pipelineStages,
-  dealHealthConfig,
-  recentUploads,
-  missingDocuments,
-  drawRequestsByLoanNumber,
-  drawRequestStages,
-} from '../../data/adminData'
+import { pipelineStages } from './PipelineSection'
+import { dealHealthConfig, drawRequestStages } from '../../common/constants/uiStyles'
+
+const pipelineLoans = []
+const recentUploads = []
+const missingDocuments = []
+const drawRequestsByLoanNumber = {}
 
 const healthOptions = Object.keys(dealHealthConfig)
 
@@ -145,7 +143,7 @@ export default function LoanDetailSection() {
             </h1>
             <p className="mt-1 text-sm text-slate-500">{loan.address}</p>
           </div>
-          <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${dealHealthConfig[loan.health].classes}`}>
+          <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${dealHealthConfig[loan.health]?.classes ?? 'bg-slate-100 text-slate-600'}`}>
             {loan.health}
           </span>
         </div>

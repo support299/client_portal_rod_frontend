@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { ShieldCheck, ArrowLeftRight, X } from 'lucide-react'
-import { adminNavSections } from '../../data/adminSections'
+import { adminNavSections } from '../../common/constants/adminNav'
 
 function AdminSidebarContent({ onNavigate }) {
   return (

@@ -10,7 +10,6 @@ import {
   ListChecks,
   ArrowRight,
 } from 'lucide-react'
-import { resourceCategories } from '../data/dashboardData'
 
 const icons = {
   BookOpen,
@@ -24,7 +23,15 @@ const icons = {
   ListChecks,
 }
 
-export default function ResourceCenterSection() {
+export default function ResourceCenterSection({ resourceCategories = [] }) {
+  if (resourceCategories.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
+        <p className="text-sm text-slate-500">Resources will be listed here when available.</p>
+      </div>
+    )
+  }
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {resourceCategories.map((category) => {
@@ -36,7 +43,7 @@ export default function ResourceCenterSection() {
             className="group flex flex-col items-start rounded-xl border border-slate-200 bg-white p-5 text-left transition-colors hover:border-emerald-300 hover:bg-emerald-50 sm:p-6"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 group-hover:bg-white">
-              <Icon className="h-5 w-5" />
+              {Icon && <Icon className="h-5 w-5" />}
             </div>
             <h2 className="mt-3 text-sm font-semibold text-slate-900">{category.title}</h2>
             <p className="mt-1 text-sm text-slate-500">{category.description}</p>

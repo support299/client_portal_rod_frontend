@@ -1,15 +1,26 @@
-import { pipelineStages, pipelineLoans, dealHealthConfig } from '../../data/adminData'
+import { dealHealthConfig } from '../../common/constants/uiStyles'
+
+export const pipelineStages = [
+  { key: 'new', label: 'New Application' },
+  { key: 'processing', label: 'Processing' },
+  { key: 'underwriting', label: 'Underwriting' },
+  { key: 'approved', label: 'Approved' },
+  { key: 'closing', label: 'Closing' },
+  { key: 'funded', label: 'Funded' },
+]
 
 function LoanCard({ loan }) {
+  const healthClasses = dealHealthConfig[loan.health]?.classes ?? 'bg-slate-100 text-slate-600'
+
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3.5 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-semibold text-slate-900">{loan.loanNumber}</p>
-        <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${dealHealthConfig[loan.health].classes}`}
-        >
-          {loan.health}
-        </span>
+        {loan.health && (
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${healthClasses}`}>
+            {loan.health}
+          </span>
+        )}
       </div>
       <p className="mt-1 text-sm text-slate-600">{loan.borrower}</p>
       <p className="text-xs text-slate-400">{loan.address}</p>
@@ -24,7 +35,7 @@ function LoanCard({ loan }) {
   )
 }
 
-export default function PipelineSection() {
+export default function PipelineSection({ pipelineLoans = [] }) {
   return (
     <div className="-mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
       <div className="flex gap-4" style={{ minWidth: 'max-content' }}>

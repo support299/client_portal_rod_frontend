@@ -1,5 +1,5 @@
 import { CircleCheck, AlertTriangle, UserRoundCheck } from 'lucide-react'
-import { dealHealthConfig } from '../data/dashboardData'
+import { dealHealthConfig } from '../common/constants/uiStyles'
 
 const icons = {
   CircleCheck,
@@ -13,6 +13,7 @@ const sizes = {
 }
 
 export default function DealHealthBadge({ health, size = 'md', className = '' }) {
+  if (!health) return null
   const config = dealHealthConfig[health]
   if (!config) return null
 

@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { properties } from '../data/dashboardData'
 
-export default function PropertySelector({ selected, onChange }) {
+export default function PropertySelector({ properties = [], selected, onChange }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -14,6 +13,12 @@ export default function PropertySelector({ selected, onChange }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  if (properties.length === 0) return null
+
+  const label = selected
+    ? `${selected.address ?? 'Loan'}${selected.status ? ` (${selected.status})` : ''}`
+    : 'Select a loan'
+
   return (
     <div className="relative inline-block" ref={ref}>
       <button
@@ -22,9 +27,7 @@ export default function PropertySelector({ selected, onChange }) {
         className="flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100"
       >
         <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
-        <span className="truncate">
-          {selected.address} ({selected.status})
-        </span>
+        <span className="truncate">{label}</span>
         <ChevronDown className="h-4 w-4 shrink-0" />
       </button>
 
@@ -42,7 +45,8 @@ export default function PropertySelector({ selected, onChange }) {
             >
               <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
               <span className="truncate">
-                {p.address} ({p.status})
+                {p.address ?? 'Loan'}
+                {p.status ? ` (${p.status})` : ''}
               </span>
             </button>
           ))}

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { TrendingUp, Calculator, Repeat, Percent, Scale, Ruler } from 'lucide-react'
-import { currentRates } from '../data/dashboardData'
 
 function formatCurrency(value) {
   if (!Number.isFinite(value)) return '—'
@@ -12,7 +11,7 @@ function formatPercent(value, decimals = 1) {
   return `${value.toFixed(decimals)}%`
 }
 
-function CurrentRatesCard() {
+function CurrentRatesCard({ currentRates = [] }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
       <div className="flex items-center gap-2.5">
@@ -21,14 +20,18 @@ function CurrentRatesCard() {
         </div>
         <h2 className="text-base font-semibold text-slate-900">Current Rates</h2>
       </div>
-      <ul className="mt-4 divide-y divide-slate-100">
-        {currentRates.map((rate) => (
-          <li key={rate.id} className="flex items-center justify-between gap-3 py-2.5">
-            <p className="text-sm text-slate-600">{rate.label}</p>
-            <p className="text-sm font-semibold text-slate-900">{rate.rate}</p>
-          </li>
-        ))}
-      </ul>
+      {currentRates.length === 0 ? (
+        <p className="mt-4 text-sm text-slate-500">Rate information will appear here when available.</p>
+      ) : (
+        <ul className="mt-4 divide-y divide-slate-100">
+          {currentRates.map((rate) => (
+            <li key={rate.id} className="flex items-center justify-between gap-3 py-2.5">
+              <p className="text-sm text-slate-600">{rate.label}</p>
+              <p className="text-sm font-semibold text-slate-900">{rate.rate}</p>
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="mt-3 text-xs text-slate-400">
         Indicative ranges only. Your rate depends on credit, experience, and deal specifics.
       </p>

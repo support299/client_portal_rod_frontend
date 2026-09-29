@@ -1,13 +1,6 @@
-import { ArrowLeft, Send, Construction, ChevronRight } from 'lucide-react'
-import { getSection } from '../data/sections'
-import {
-  loanSummaries,
-  messageThread,
-  assignedOfficer,
-  properties,
-  loanStatusStyles,
-  dealTimeline,
-} from '../data/dashboardData'
+import { ArrowLeft, Send, Construction, ChevronRight, User } from 'lucide-react'
+import { getSection } from '../common/constants/nav'
+import { loanStatusStyles } from '../common/constants/uiStyles'
 import DealHealthBadge from './DealHealthBadge'
 import ProfileSection from './ProfileSection'
 import DrawRequestsSection from './DrawRequestsSection'
@@ -37,79 +30,97 @@ function SectionHeader({ label, subtitle, onBack }) {
   )
 }
 
-function MyLoansSection({ onSelectLoan }) {
+function MyLoansSection({ onSelectLoan, properties = [] }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
       <h2 className="text-base font-semibold text-slate-900">Current Loans</h2>
 
-      <ul className="mt-4 divide-y divide-slate-100">
-        {properties.map((loan) => (
-          <li key={loan.id}>
-            <button
-              type="button"
-              onClick={() => onSelectLoan(loan)}
-              className="flex w-full flex-col gap-4 py-4 text-left transition-colors hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:rounded-lg sm:px-3"
-            >
-              <div className="flex items-center gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">{loan.address}</p>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    <span
-                      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${loanStatusStyles[loan.status]}`}
-                    >
-                      {loan.status}
-                    </span>
-                    <DealHealthBadge health={loan.health} size="sm" />
+      {properties.length === 0 ? (
+        <p className="mt-4 text-sm text-slate-500">You don&apos;t have any loans yet.</p>
+      ) : (
+        <ul className="mt-4 divide-y divide-slate-100">
+          {properties.map((loan) => (
+            <li key={loan.id}>
+              <button
+                type="button"
+                onClick={() => onSelectLoan(loan)}
+                className="flex w-full flex-col gap-4 py-4 text-left transition-colors hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:rounded-lg sm:px-3"
+              >
+                <div className="flex items-center gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{loan.address}</p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      {loan.status && (
+                        <span
+                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${loanStatusStyles[loan.status] ?? 'bg-slate-100 text-slate-600'}`}
+                        >
+                          {loan.status}
+                        </span>
+                      )}
+                      <DealHealthBadge health={loan.health} size="sm" />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-3 gap-4 sm:gap-8">
-                <div>
-                  <p className="text-xs text-slate-400">Next Payment</p>
-                  <p className="text-sm font-medium text-slate-700">{loan.nextPaymentDate}</p>
+                <div className="grid grid-cols-3 gap-4 sm:gap-8">
+                  <div>
+                    <p className="text-xs text-slate-400">Next Payment</p>
+                    <p className="text-sm font-medium text-slate-700">{loan.nextPaymentDate ?? '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400">Total Due</p>
+                    <p className="text-sm font-medium text-slate-700">{loan.totalDue ?? '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400">Est. End Date</p>
+                    <p className="text-sm font-medium text-slate-700">{loan.estimatedEndDate ?? '—'}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-slate-400">Total Due</p>
-                  <p className="text-sm font-medium text-slate-700">{loan.totalDue}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400">Est. End Date</p>
-                  <p className="text-sm font-medium text-slate-700">{loan.estimatedEndDate}</p>
-                </div>
-              </div>
 
-              <ChevronRight className="hidden h-5 w-5 shrink-0 text-slate-300 sm:block" />
-            </button>
-          </li>
-        ))}
-      </ul>
+                <ChevronRight className="hidden h-5 w-5 shrink-0 text-slate-300 sm:block" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
 
-function DealTimelineSection() {
+function DealTimelineSection({ dealTimeline = [] }) {
   const orderedTimeline = [...dealTimeline].reverse()
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
       <h2 className="text-base font-semibold text-slate-900">Recent Activity</h2>
 
-      <ul className="mt-4 divide-y divide-slate-100">
-        {orderedTimeline.map((event) => (
-          <li key={event.id} className="py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              {event.date}
-            </p>
-            <p className="mt-0.5 text-sm font-semibold text-slate-900">{event.title}</p>
-          </li>
-        ))}
-      </ul>
+      {orderedTimeline.length === 0 ? (
+        <p className="mt-4 text-sm text-slate-500">No timeline events yet.</p>
+      ) : (
+        <ul className="mt-4 divide-y divide-slate-100">
+          {orderedTimeline.map((event) => (
+            <li key={event.id} className="py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                {event.date}
+              </p>
+              <p className="mt-0.5 text-sm font-semibold text-slate-900">{event.title}</p>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
 
-function LoanSummarySection() {
+function LoanSummarySection({ loanSummaries = [] }) {
+  if (loanSummaries.length === 0) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+        <p className="text-sm text-slate-500">Loan summaries will appear here when you have active loans.</p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {loanSummaries.map((loan) => {
@@ -138,7 +149,7 @@ function LoanSummarySection() {
                   className="flex items-center justify-between gap-3 border-b border-slate-100 py-3"
                 >
                   <dt className="text-sm text-slate-500">{term.label}</dt>
-                  <dd className="text-sm font-semibold text-slate-900">{term.value}</dd>
+                  <dd className="text-sm font-semibold text-slate-900">{term.value ?? '—'}</dd>
                 </div>
               ))}
             </dl>
@@ -149,41 +160,51 @@ function LoanSummarySection() {
   )
 }
 
-function MessagesSection() {
+function MessagesSection({ assignedOfficer = null, messageThread = [] }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
       <div className="flex items-center gap-3">
-        <img src={assignedOfficer.avatar} alt="" className="h-10 w-10 rounded-full object-cover" />
+        {assignedOfficer?.avatar ? (
+          <img src={assignedOfficer.avatar} alt="" className="h-10 w-10 rounded-full object-cover" />
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+            <User className="h-5 w-5" />
+          </div>
+        )}
         <div>
-          <p className="text-sm font-semibold text-slate-900">{assignedOfficer.name}</p>
-          <p className="text-xs text-slate-400">{assignedOfficer.title}</p>
+          <p className="text-sm font-semibold text-slate-900">{assignedOfficer?.name || '—'}</p>
+          <p className="text-xs text-slate-400">{assignedOfficer?.title || 'Loan officer'}</p>
         </div>
       </div>
 
       <div className="mt-5 space-y-4">
-        {messageThread.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
+        {messageThread.length === 0 ? (
+          <p className="text-sm text-slate-500">No messages yet.</p>
+        ) : (
+          messageThread.map((msg) => (
             <div
-              className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm sm:max-w-[70%] ${
-                msg.from === 'user'
-                  ? 'bg-emerald-700 text-white'
-                  : 'bg-slate-100 text-slate-800'
-              }`}
+              key={msg.id}
+              className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <p>{msg.text}</p>
-              <p
-                className={`mt-1 text-[11px] ${
-                  msg.from === 'user' ? 'text-emerald-100' : 'text-slate-400'
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm sm:max-w-[70%] ${
+                  msg.from === 'user'
+                    ? 'bg-emerald-700 text-white'
+                    : 'bg-slate-100 text-slate-800'
                 }`}
               >
-                {msg.time}
-              </p>
+                <p>{msg.text}</p>
+                <p
+                  className={`mt-1 text-[11px] ${
+                    msg.from === 'user' ? 'text-emerald-100' : 'text-slate-400'
+                  }`}
+                >
+                  {msg.time}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       <form
@@ -231,39 +252,66 @@ const sectionSubtitles = {
   resources: 'Great marketing opportunity.',
 }
 
-export default function SectionPage({ sectionId, onBack, onSelectLoan }) {
+export default function SectionPage({
+  sectionId,
+  onBack,
+  onSelectLoan,
+  loans = [],
+  selectedLoan = null,
+  loanDetail = null,
+}) {
   const section = getSection(sectionId)
   const label = section?.label ?? 'Section'
   const subtitle = sectionSubtitles[sectionId]
+  const docs = loanDetail?.documents || { documentsNeeded: [], documentsSent: [] }
+  const summaries = loanDetail?.summary ? [loanDetail.summary] : []
 
   let content
   switch (sectionId) {
     case 'my-loans':
-      content = <MyLoansSection onSelectLoan={onSelectLoan} />
+      content = <MyLoansSection onSelectLoan={onSelectLoan} properties={loans} />
       break
     case 'deal-timeline':
       content = <DealTimelineSection />
       break
     case 'documents':
-      content = <DocumentCenterSection />
+      content = (
+        <DocumentCenterSection
+          documentsNeeded={docs.documentsNeeded}
+          documentsSent={docs.documentsSent}
+        />
+      )
       break
     case 'loan-summary':
-      content = <LoanSummarySection />
+      content = <LoanSummarySection loanSummaries={summaries} />
       break
     case 'messages':
-      content = <MessagesSection />
+      content = <MessagesSection assignedOfficer={loanDetail?.assignedOfficer} />
       break
     case 'calendar':
-      content = <CalendarSection />
+      content = <CalendarSection properties={loans} />
       break
     case 'profile':
       content = <ProfileSection />
       break
     case 'draw-requests':
-      content = <DrawRequestsSection />
+      content = <DrawRequestsSection properties={loans} />
       break
     case 'conditions':
-      content = <ConditionsSection />
+      content = (
+        <ConditionsSection
+          conditionsList={(docs.documentsNeeded || []).map((d) => ({
+            id: d.id,
+            name: d.name,
+            status:
+              d.status === 'Uploaded'
+                ? 'Complete'
+                : d.status === 'Needs Revision' || d.status === 'Rejected'
+                  ? 'Rejected'
+                  : 'Pending',
+          }))}
+        />
+      )
       break
     case 'tools':
       content = <MarketToolsSection />

@@ -1,7 +1,8 @@
 import { AlertTriangle, FileUp } from 'lucide-react'
-import { urgentAction } from '../data/dashboardData'
 
-export default function UrgentAction() {
+export default function UrgentAction({ urgentAction = null }) {
+  if (!urgentAction?.title) return null
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
       <div className="flex items-center gap-2 text-red-600">
@@ -16,7 +17,9 @@ export default function UrgentAction() {
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-900">{urgentAction.title}</p>
-            <p className="text-sm font-medium text-red-600">{urgentAction.subtitle}</p>
+            {urgentAction.subtitle && (
+              <p className="text-sm font-medium text-red-600">{urgentAction.subtitle}</p>
+            )}
           </div>
         </div>
         <button

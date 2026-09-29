@@ -1,14 +1,12 @@
 import { Link } from 'react-router-dom'
 import { Landmark, CheckSquare, FileWarning, ChevronRight } from 'lucide-react'
-import {
-  pipelineStages,
-  pipelineLoans,
-  tasks,
-  missingDocuments,
-  recentUploads,
-  taskPriorityStyles,
-  staffUser,
-} from '../../data/adminData'
+import { pipelineStages } from './PipelineSection'
+
+const taskPriorityStyles = {
+  High: 'bg-red-100 text-red-700',
+  Medium: 'bg-amber-100 text-amber-800',
+  Low: 'bg-slate-100 text-slate-600',
+}
 
 function StatCard({ label, value, icon: Icon }) {
   return (
@@ -38,9 +36,20 @@ function SectionCard({ title, viewAllTo, children }) {
   )
 }
 
-export default function AdminOverview() {
+export default function AdminOverview({
+  pipelineLoans = [],
+  tasks = [],
+  missingDocuments = [],
+  recentUploads = [],
+  staffUser = null,
+}) {
   const openTasksCount = tasks.filter((t) => t.status !== 'Done').length
-  const myTasks = tasks.filter((t) => t.assignee === staffUser.name && t.status !== 'Done').slice(0, 4)
+  const staffName = staffUser?.name ?? ''
+  const myTasks = tasks
+    .filter((t) => (staffName ? t.assignee === staffName : true) && t.status !== 'Done')
+    .slice(0, 4)
+
+  const pipelineTotal = pipelineLoans.length || 1
 
   return (
     <div className="space-y-6">
@@ -66,7 +75,7 @@ export default function AdminOverview() {
             <ul className="mt-4 space-y-3">
               {pipelineStages.map((stage) => {
                 const count = pipelineLoans.filter((l) => l.stage === stage.key).length
-                const pct = Math.round((count / pipelineLoans.length) * 100)
+                const pct = Math.round((count / pipelineTotal) * 100)
                 return (
                   <li key={stage.key}>
                     <div className="flex items-center justify-between text-sm">
@@ -93,7 +102,7 @@ export default function AdminOverview() {
                     </p>
                   </div>
                   <span
-                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${taskPriorityStyles[task.priority]}`}
+                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${taskPriorityStyles[task.priority] ?? 'bg-slate-100 text-slate-600'}`}
                   >
                     {task.priority}
                   </span>
@@ -108,29 +117,37 @@ export default function AdminOverview() {
 
         <div className="space-y-6">
           <SectionCard title="Missing Documents" viewAllTo="/admin/documents">
-            <ul className="mt-4 divide-y divide-slate-100">
-              {missingDocuments.slice(0, 4).map((doc) => (
-                <li key={doc.id} className="py-3">
-                  <p className="text-sm font-semibold text-slate-900">{doc.document}</p>
-                  <p className="text-xs text-slate-400">
-                    {doc.borrower} &middot; {doc.daysOutstanding}d outstanding
-                  </p>
-                </li>
-              ))}
-            </ul>
+            {missingDocuments.length === 0 ? (
+              <p className="mt-4 text-sm text-slate-400">No missing documents.</p>
+            ) : (
+              <ul className="mt-4 divide-y divide-slate-100">
+                {missingDocuments.slice(0, 4).map((doc) => (
+                  <li key={doc.id} className="py-3">
+                    <p className="text-sm font-semibold text-slate-900">{doc.document}</p>
+                    <p className="text-xs text-slate-400">
+                      {doc.borrower} &middot; {doc.daysOutstanding}d outstanding
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </SectionCard>
 
           <SectionCard title="Recent Uploads" viewAllTo="/admin/documents">
-            <ul className="mt-4 divide-y divide-slate-100">
-              {recentUploads.slice(0, 4).map((file) => (
-                <li key={file.id} className="py-3">
-                  <p className="text-sm font-semibold text-slate-900">{file.fileName}</p>
-                  <p className="text-xs text-slate-400">
-                    {file.borrower} &middot; {file.uploadedAt}
-                  </p>
-                </li>
-              ))}
-            </ul>
+            {recentUploads.length === 0 ? (
+              <p className="mt-4 text-sm text-slate-400">No recent uploads.</p>
+            ) : (
+              <ul className="mt-4 divide-y divide-slate-100">
+                {recentUploads.slice(0, 4).map((file) => (
+                  <li key={file.id} className="py-3">
+                    <p className="text-sm font-semibold text-slate-900">{file.fileName}</p>
+                    <p className="text-xs text-slate-400">
+                      {file.borrower} &middot; {file.uploadedAt}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </SectionCard>
         </div>
       </div>

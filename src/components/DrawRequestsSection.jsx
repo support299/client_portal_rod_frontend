@@ -1,11 +1,6 @@
 import { useState } from 'react'
 import { Camera, Receipt, ClipboardCheck, MessageSquare, Upload, Check, Plus, X, Clock } from 'lucide-react'
-import {
-  drawRequestStages,
-  drawRequestsByLoan,
-  constructionBudgets,
-  properties,
-} from '../data/dashboardData'
+import { drawRequestStages } from '../common/constants/uiStyles'
 import PropertySelector from './PropertySelector'
 
 const currency = (value) => `$${value.toLocaleString('en-US')}`
@@ -214,20 +209,30 @@ function NotYetAvailableCard() {
   )
 }
 
-export default function DrawRequestsSection() {
-  const [selectedProperty, setSelectedProperty] = useState(properties[0])
-  const [requestsByLoan, setRequestsByLoan] = useState(drawRequestsByLoan)
+export default function DrawRequestsSection({ properties = [] }) {
+  const [selectedProperty, setSelectedProperty] = useState(properties[0] ?? null)
+  const [requestsByLoan, setRequestsByLoan] = useState({})
   const [formOpen, setFormOpen] = useState(false)
 
-  const budget = constructionBudgets[selectedProperty.id]
-  const requests = requestsByLoan[selectedProperty.id] ?? []
+  if (properties.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
+        <p className="text-sm text-slate-500">Select a funded loan to manage draw requests.</p>
+      </div>
+    )
+  }
+
+  const propertyId = selectedProperty?.id
+  const budget = selectedProperty?.constructionBudget ?? { total: 0, released: 0, remaining: 0 }
+  const requests = propertyId != null ? (requestsByLoan[propertyId] ?? []) : []
   const hasFunding = budget.total > 0
 
   const handleSubmit = ({ amount, comment }) => {
+    if (propertyId == null) return
     const nextId = requests.length ? Math.max(...requests.map((r) => r.id)) + 1 : 1
     setRequestsByLoan({
       ...requestsByLoan,
-      [selectedProperty.id]: [
+      [propertyId]: [
         {
           id: nextId,
           label: `Draw #${nextId}`,
@@ -245,6 +250,7 @@ export default function DrawRequestsSection() {
   return (
     <div className="space-y-6">
       <PropertySelector
+        properties={properties}
         selected={selectedProperty}
         onChange={(property) => {
           setSelectedProperty(property)

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CircleCheck, Clock, Circle } from 'lucide-react'
-import { milestonesByLoan, milestoneStatusStyles } from '../../data/adminData'
+import { milestoneStatusStyles } from '../../common/constants/uiStyles'
 
 const statusIcons = { CircleCheck, Clock, Circle }
 
@@ -27,7 +27,7 @@ function LoanMilestones({ loanNumber, milestones: initial }) {
       <ol className="mt-4 space-y-1">
         {milestones.map((m, index) => {
           const config = milestoneStatusStyles[m.status]
-          const Icon = statusIcons[config.icon]
+          const Icon = config ? statusIcons[config.icon] : Circle
           return (
             <li key={m.key}>
               <button
@@ -37,7 +37,7 @@ function LoanMilestones({ loanNumber, milestones: initial }) {
               >
                 <div className="flex items-center gap-3">
                   <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${config.classes}`}
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${config?.classes ?? 'bg-slate-100 text-slate-500'}`}
                   >
                     <Icon className="h-3.5 w-3.5" />
                   </span>
@@ -57,10 +57,20 @@ function LoanMilestones({ loanNumber, milestones: initial }) {
   )
 }
 
-export default function MilestonesSection() {
+export default function MilestonesSection({ milestonesByLoan = {} }) {
+  const entries = Object.entries(milestonesByLoan)
+
+  if (entries.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
+        <p className="text-sm text-slate-500">Milestone tracking will appear when loans are active.</p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      {Object.entries(milestonesByLoan).map(([loanNumber, milestones]) => (
+      {entries.map(([loanNumber, milestones]) => (
         <LoanMilestones key={loanNumber} loanNumber={loanNumber} milestones={milestones} />
       ))}
     </div>

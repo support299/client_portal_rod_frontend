@@ -1,5 +1,4 @@
 import { Hourglass, Check, Lock } from 'lucide-react'
-import { loanStages, currentStatus } from '../data/dashboardData'
 
 function StageIcon({ state }) {
   if (state === 'complete') {
@@ -30,7 +29,17 @@ function StageIcon({ state }) {
   )
 }
 
-export default function StatusTracker() {
+export default function StatusTracker({ loanStages = [], currentStatus = null }) {
+  if (!currentStatus && loanStages.length === 0) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+        <p className="text-sm text-slate-500">
+          Loan status will appear here once your application is in progress.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -42,39 +51,45 @@ export default function StatusTracker() {
             <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
               Current Status
             </p>
-            <p className="text-base font-semibold text-slate-900">{currentStatus.label}</p>
+            <p className="text-base font-semibold text-slate-900">
+              {currentStatus?.label ?? '—'}
+            </p>
           </div>
         </div>
-        <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-800">
-          {currentStatus.badge}
-        </span>
+        {currentStatus?.badge && (
+          <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-800">
+            {currentStatus.badge}
+          </span>
+        )}
       </div>
 
-      <div className="mt-8 flex items-start">
-        {loanStages.map((stage, i) => (
-          <div key={stage.key} className="flex flex-1 items-center last:flex-none">
-            <div className="flex flex-col items-center gap-2">
-              <StageIcon state={stage.state} />
-              <span
-                className={`whitespace-nowrap text-[11px] font-medium sm:text-sm ${
-                  stage.state === 'complete' || stage.state === 'current'
-                    ? 'text-emerald-700'
-                    : 'text-slate-400'
-                }`}
-              >
-                {stage.label}
-              </span>
+      {loanStages.length > 0 && (
+        <div className="mt-8 flex items-start">
+          {loanStages.map((stage, i) => (
+            <div key={stage.key} className="flex flex-1 items-center last:flex-none">
+              <div className="flex flex-col items-center gap-2">
+                <StageIcon state={stage.state} />
+                <span
+                  className={`whitespace-nowrap text-[11px] font-medium sm:text-sm ${
+                    stage.state === 'complete' || stage.state === 'current'
+                      ? 'text-emerald-700'
+                      : 'text-slate-400'
+                  }`}
+                >
+                  {stage.label}
+                </span>
+              </div>
+              {i < loanStages.length - 1 && (
+                <div
+                  className={`mx-1 h-0.5 flex-1 sm:mx-2 ${
+                    stage.state === 'complete' ? 'bg-emerald-600' : 'bg-slate-200'
+                  }`}
+                />
+              )}
             </div>
-            {i < loanStages.length - 1 && (
-              <div
-                className={`mx-1 h-0.5 flex-1 sm:mx-2 ${
-                  stage.state === 'complete' ? 'bg-emerald-600' : 'bg-slate-200'
-                }`}
-              />
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,17 +1,21 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Landmark, X } from 'lucide-react'
-import {
-  tasks,
-  taskStatusStyles,
-  taskPriorityStyles,
-  staffDirectory,
-  pipelineLoans,
-  pipelineStages,
-  dealHealthConfig,
-} from '../../data/adminData'
+import { pipelineStages } from './PipelineSection'
+import { dealHealthConfig } from '../../common/constants/uiStyles'
 
-const assigneeOptions = ['All', ...staffDirectory.map((m) => m.name)]
+const taskStatusStyles = {
+  Open: 'bg-slate-100 text-slate-600',
+  'In Progress': 'bg-blue-100 text-blue-700',
+  Done: 'bg-emerald-100 text-emerald-700',
+}
+
+const taskPriorityStyles = {
+  High: 'bg-red-100 text-red-700',
+  Medium: 'bg-amber-100 text-amber-800',
+  Low: 'bg-slate-100 text-slate-600',
+}
+
 const healthOptions = Object.keys(dealHealthConfig)
 
 const emptyLoanForm = {
@@ -20,18 +24,25 @@ const emptyLoanForm = {
   address: '',
   amount: '',
   stage: pipelineStages[0].key,
-  officer: staffDirectory[0]?.name ?? '',
+  officer: '',
   health: healthOptions[0],
 }
 
 export default function TasksSection() {
+  const [tasks, setTasks] = useState([])
+  const [pipelineLoans, setPipelineLoans] = useState([])
   const [filter, setFilter] = useState('All')
   const [showLoanForm, setShowLoanForm] = useState(false)
   const [loanForm, setLoanForm] = useState(emptyLoanForm)
 
+  const assigneeOptions = useMemo(() => {
+    const names = [...new Set(tasks.map((t) => t.assignee).filter(Boolean))]
+    return ['All', ...names]
+  }, [tasks])
+
   const filteredTasks = useMemo(
     () => (filter === 'All' ? tasks : tasks.filter((t) => t.assignee === filter)),
-    [filter],
+    [filter, tasks],
   )
 
   const openCount = tasks.filter((t) => t.status !== 'Done').length
@@ -45,17 +56,20 @@ export default function TasksSection() {
     e.preventDefault()
     if (!loanForm.loanNumber.trim() || !loanForm.borrower.trim()) return
 
-    pipelineLoans.push({
-      id: pipelineLoans.length ? Math.max(...pipelineLoans.map((l) => l.id)) + 1 : 1,
-      loanNumber: loanForm.loanNumber.trim(),
-      borrower: loanForm.borrower.trim(),
-      address: loanForm.address.trim(),
-      amount: loanForm.amount.trim(),
-      stage: loanForm.stage,
-      officer: loanForm.officer,
-      daysInStage: 0,
-      health: loanForm.health,
-    })
+    setPipelineLoans((list) => [
+      ...list,
+      {
+        id: list.length ? Math.max(...list.map((l) => l.id)) + 1 : 1,
+        loanNumber: loanForm.loanNumber.trim(),
+        borrower: loanForm.borrower.trim(),
+        address: loanForm.address.trim(),
+        amount: loanForm.amount.trim(),
+        stage: loanForm.stage,
+        officer: loanForm.officer,
+        daysInStage: 0,
+        health: loanForm.health,
+      },
+    ])
     setLoanForm(emptyLoanForm)
     setShowLoanForm(false)
   }
@@ -118,7 +132,7 @@ export default function TasksSection() {
                   value={loanForm.borrower}
                   onChange={handleLoanChange}
                   className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
-                  placeholder="Jane Doe"
+                  placeholder="Borrower name"
                 />
               </div>
               <div>
@@ -161,17 +175,15 @@ export default function TasksSection() {
               </div>
               <div>
                 <label htmlFor="officer" className="text-xs font-medium text-slate-500">Loan Officer</label>
-                <select
+                <input
                   id="officer"
                   name="officer"
+                  type="text"
                   value={loanForm.officer}
                   onChange={handleLoanChange}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
-                >
-                  {staffDirectory.map(({ id, name }) => (
-                    <option key={id} value={name}>{name}</option>
-                  ))}
-                </select>
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
+                  placeholder="Loan officer"
+                />
               </div>
               <div>
                 <label htmlFor="health" className="text-xs font-medium text-slate-500">Deal Health</label>
@@ -243,12 +255,12 @@ export default function TasksSection() {
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-400">Due {task.dueDate}</span>
                 <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${taskPriorityStyles[task.priority]}`}
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${taskPriorityStyles[task.priority] ?? 'bg-slate-100 text-slate-600'}`}
                 >
                   {task.priority}
                 </span>
                 <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${taskStatusStyles[task.status]}`}
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${taskStatusStyles[task.status] ?? 'bg-slate-100 text-slate-600'}`}
                 >
                   {task.status}
                 </span>

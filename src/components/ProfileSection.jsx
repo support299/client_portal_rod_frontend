@@ -11,16 +11,13 @@ import {
   CreditCard,
   BadgeCheck,
 } from 'lucide-react'
-import {
-  businessInfo,
-  llcInfo,
-  taxId,
-  bankAccounts,
-  authorizedSigners,
-  insuranceCertificates,
-  mailingAddress,
-  communicationPreferences,
-} from '../data/dashboardData'
+
+const communicationPreferenceTemplate = [
+  { id: 1, label: 'Email Notifications', description: 'Loan updates, document requests, and messages', enabled: true },
+  { id: 2, label: 'SMS Alerts', description: 'Time-sensitive deadlines and draw approvals', enabled: true },
+  { id: 3, label: 'Draw Request Updates', description: 'Status changes on submitted draw requests', enabled: true },
+  { id: 4, label: 'Marketing & Promotions', description: 'New products, rate changes, referral offers', enabled: false },
+]
 
 function Card({ icon: Icon, title, children, onEdit }) {
   return (
@@ -52,12 +49,12 @@ function FieldRow({ label, value }) {
   return (
     <div className="flex items-center justify-between gap-3 py-2.5">
       <dt className="text-sm text-slate-500">{label}</dt>
-      <dd className="text-sm font-semibold text-slate-900">{value}</dd>
+      <dd className="text-sm font-semibold text-slate-900">{value || '—'}</dd>
     </div>
   )
 }
 
-function BusinessInfoCard() {
+function BusinessInfoCard({ businessInfo = {} }) {
   return (
     <Card icon={Building2} title="Business Information" onEdit={() => {}}>
       <dl className="divide-y divide-slate-100">
@@ -70,7 +67,7 @@ function BusinessInfoCard() {
   )
 }
 
-function LlcInfoCard() {
+function LlcInfoCard({ llcInfo = {} }) {
   return (
     <Card icon={BadgeCheck} title="LLC Information" onEdit={() => {}}>
       <dl className="divide-y divide-slate-100">
@@ -83,116 +80,147 @@ function LlcInfoCard() {
   )
 }
 
-function TaxIdCard() {
+function TaxIdCard({ taxId = {} }) {
   const [revealed, setRevealed] = useState(false)
-  const masked = `**-***${taxId.ein.slice(-4)}`
+  const ein = taxId.ein ?? ''
+  const masked = ein.length >= 4 ? `**-***${ein.slice(-4)}` : '—'
 
   return (
     <Card icon={ShieldCheck} title="Tax ID (EIN)">
       <div className="flex items-center justify-between gap-3">
         <p className="font-mono text-sm font-semibold text-slate-900">
-          {revealed ? taxId.ein : masked}
+          {revealed && ein ? ein : masked}
         </p>
-        <button
-          type="button"
-          onClick={() => setRevealed((r) => !r)}
-          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 hover:text-emerald-700"
-        >
-          {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-          {revealed ? 'Hide' : 'Reveal'}
-        </button>
+        {ein && (
+          <button
+            type="button"
+            onClick={() => setRevealed((r) => !r)}
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 hover:text-emerald-700"
+          >
+            {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {revealed ? 'Hide' : 'Reveal'}
+          </button>
+        )}
       </div>
     </Card>
   )
 }
 
-function BankAccountsCard() {
+function BankAccountsCard({ bankAccounts = [] }) {
   return (
     <Card icon={CreditCard} title="Bank Accounts">
-      <ul className="divide-y divide-slate-100">
-        {bankAccounts.map((account) => (
-          <li key={account.id} className="flex items-center justify-between gap-3 py-3">
-            <div>
-              <p className="text-sm font-semibold text-slate-900">{account.bankName}</p>
-              <p className="text-xs text-slate-400">
-                {account.accountType} &middot; &bull;&bull;&bull;&bull; {account.last4}
-              </p>
-            </div>
-            {account.primary && (
-              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                Primary
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
+      {bankAccounts.length === 0 ? (
+        <p className="text-sm text-slate-500">No bank accounts on file.</p>
+      ) : (
+        <ul className="divide-y divide-slate-100">
+          {bankAccounts.map((account) => (
+            <li key={account.id} className="flex items-center justify-between gap-3 py-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">{account.bankName}</p>
+                <p className="text-xs text-slate-400">
+                  {account.accountType} &middot; &bull;&bull;&bull;&bull; {account.last4}
+                </p>
+              </div>
+              {account.primary && (
+                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                  Primary
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </Card>
   )
 }
 
-function AuthorizedSignersCard() {
+function AuthorizedSignersCard({ authorizedSigners = [] }) {
   return (
     <Card icon={Users} title="Authorized Signers">
-      <ul className="divide-y divide-slate-100">
-        {authorizedSigners.map((signer) => (
-          <li key={signer.id} className="py-3">
-            <p className="text-sm font-semibold text-slate-900">
-              {signer.name} <span className="font-normal text-slate-400">&middot; {signer.title}</span>
-            </p>
-            <p className="mt-0.5 text-sm text-slate-500">{signer.email}</p>
-            <p className="text-sm text-slate-500">{signer.phone}</p>
-          </li>
-        ))}
-      </ul>
+      {authorizedSigners.length === 0 ? (
+        <p className="text-sm text-slate-500">No authorized signers on file.</p>
+      ) : (
+        <ul className="divide-y divide-slate-100">
+          {authorizedSigners.map((signer) => (
+            <li key={signer.id} className="py-3">
+              <p className="text-sm font-semibold text-slate-900">
+                {signer.name}{' '}
+                {signer.title && (
+                  <span className="font-normal text-slate-400">&middot; {signer.title}</span>
+                )}
+              </p>
+              {signer.email && <p className="mt-0.5 text-sm text-slate-500">{signer.email}</p>}
+              {signer.phone && <p className="text-sm text-slate-500">{signer.phone}</p>}
+            </li>
+          ))}
+        </ul>
+      )}
     </Card>
   )
 }
 
-function InsuranceCertificatesCard() {
+function InsuranceCertificatesCard({ insuranceCertificates = [] }) {
   return (
     <Card icon={ShieldCheck} title="Insurance Certificates">
-      <ul className="divide-y divide-slate-100">
-        {insuranceCertificates.map((cert) => (
-          <li key={cert.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-            <div>
-              <p className="text-sm font-semibold text-slate-900">
-                {cert.provider} <span className="font-normal text-slate-400">&middot; {cert.coverageType}</span>
-              </p>
-              <p className="text-xs text-slate-400">
-                {cert.policyNumber} &middot; Expires {cert.expiration}
-              </p>
-            </div>
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                cert.status === 'Active'
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-amber-100 text-amber-800'
-              }`}
-            >
-              {cert.status}
-            </span>
-          </li>
-        ))}
-      </ul>
+      {insuranceCertificates.length === 0 ? (
+        <p className="text-sm text-slate-500">No insurance certificates on file.</p>
+      ) : (
+        <ul className="divide-y divide-slate-100">
+          {insuranceCertificates.map((cert) => (
+            <li key={cert.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  {cert.provider}{' '}
+                  {cert.coverageType && (
+                    <span className="font-normal text-slate-400">&middot; {cert.coverageType}</span>
+                  )}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {cert.policyNumber}
+                  {cert.expiration && <> &middot; Expires {cert.expiration}</>}
+                </p>
+              </div>
+              {cert.status && (
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                    cert.status === 'Active'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-amber-100 text-amber-800'
+                  }`}
+                >
+                  {cert.status}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </Card>
   )
 }
 
-function MailingAddressCard() {
+function MailingAddressCard({ mailingAddress = {} }) {
+  const hasAddress =
+    mailingAddress.line1 || mailingAddress.city || mailingAddress.state || mailingAddress.zip
+
   return (
     <Card icon={MapPin} title="Mailing Address" onEdit={() => {}}>
-      <p className="text-sm text-slate-700">
-        {mailingAddress.line1}
-        {mailingAddress.line2 && <>, {mailingAddress.line2}</>}
-        <br />
-        {mailingAddress.city}, {mailingAddress.state} {mailingAddress.zip}
-      </p>
+      {hasAddress ? (
+        <p className="text-sm text-slate-700">
+          {mailingAddress.line1}
+          {mailingAddress.line2 && <>, {mailingAddress.line2}</>}
+          <br />
+          {[mailingAddress.city, mailingAddress.state, mailingAddress.zip].filter(Boolean).join(', ')}
+        </p>
+      ) : (
+        <p className="text-sm text-slate-500">No mailing address on file.</p>
+      )}
     </Card>
   )
 }
 
 function CommunicationPreferencesCard() {
-  const [prefs, setPrefs] = useState(communicationPreferences)
+  const [prefs, setPrefs] = useState(communicationPreferenceTemplate)
 
   const toggle = (id) => {
     setPrefs((prev) => prev.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p)))
