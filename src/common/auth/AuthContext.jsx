@@ -65,7 +65,7 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       isAuthenticated: Boolean(user),
-      isStaff: user?.role === 'staff',
+      isStaff: user?.role === 'staff' || Boolean(user?.is_admin),
       bootstrapping,
       login,
       register,

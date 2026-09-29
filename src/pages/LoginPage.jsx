@@ -32,7 +32,7 @@ export default function LoginPage() {
     setSubmitting(true)
     try {
       const data = await login({ email: email.trim(), password })
-      const dest = data.user?.role === 'staff' ? '/admin' : from === '/login' ? '/' : from
+      const dest = data.user?.role === 'staff' || data.user?.is_admin ? '/admin' : from === '/login' ? '/' : from
       navigate(dest, { replace: true })
     } catch (err) {
       setError(err.message || 'Unable to sign in')

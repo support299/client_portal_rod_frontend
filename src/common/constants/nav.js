@@ -4,7 +4,6 @@ import {
   FileText,
   ClipboardList,
   Banknote,
-  ListChecks,
   MessageSquare,
   Calendar,
   DollarSign,
@@ -13,19 +12,14 @@ import {
   Wrench,
   User,
   Settings,
-  Milestone,
-  Users,
 } from 'lucide-react'
 
 export const navSections = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
   { id: 'my-loans', label: 'My Loans', icon: Landmark },
   { id: 'documents', label: 'Documents', icon: FileText },
-  { id: 'deal-timeline', label: 'Deal Timeline', icon: Milestone },
   { id: 'loan-summary', label: 'Loan Summary', icon: ClipboardList },
   { id: 'draw-requests', label: 'Draw Requests', icon: Banknote },
-  { id: 'conditions', label: 'Conditions', icon: ListChecks },
-  { id: 'my-team', label: 'My Team', icon: Users },
   { id: 'messages', label: 'Messages', icon: MessageSquare },
   { id: 'calendar', label: 'Calendar', icon: Calendar },
   { id: 'payments', label: 'Payments', icon: DollarSign },

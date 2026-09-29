@@ -29,8 +29,8 @@ function StageIcon({ state }) {
   )
 }
 
-export default function StatusTracker({ loanStages = [], currentStatus = null }) {
-  if (!currentStatus && loanStages.length === 0) {
+export default function StatusTracker({ loanStages = [], currentStatus = null, stageName = '' }) {
+  if (!currentStatus && !stageName && loanStages.length === 0) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
         <p className="text-sm text-slate-500">
@@ -52,7 +52,7 @@ export default function StatusTracker({ loanStages = [], currentStatus = null })
               Current Status
             </p>
             <p className="text-base font-semibold text-slate-900">
-              {currentStatus?.label ?? '—'}
+              {stageName || currentStatus?.label || '—'}
             </p>
           </div>
         </div>

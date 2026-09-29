@@ -105,6 +105,7 @@ export default function Dashboard() {
                       <StatusTracker
                         loanStages={detail?.loanStages}
                         currentStatus={detail?.currentStatus}
+                        stageName={detail?.loan?.stageName}
                       />
                       <UrgentAction urgentAction={detail?.urgentAction} />
                       <StatCards property={detail?.loan || selectedProperty} />

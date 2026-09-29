@@ -27,7 +27,7 @@ function App() {
           <Route
             path="/"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute borrowerOnly>
                 <Dashboard />
               </ProtectedRoute>
             }

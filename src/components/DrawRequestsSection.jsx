@@ -1,45 +1,63 @@
 import { useState } from 'react'
-import { Camera, Receipt, ClipboardCheck, MessageSquare, Upload, Check, Plus, X, Clock } from 'lucide-react'
+import {
+  Camera,
+  Receipt,
+  ClipboardCheck,
+  MessageSquare,
+  Paperclip,
+  Upload,
+  Check,
+  Plus,
+  X,
+  Clock,
+} from 'lucide-react'
 import { drawRequestStages } from '../common/constants/uiStyles'
 import PropertySelector from './PropertySelector'
 
-const currency = (value) => `$${value.toLocaleString('en-US')}`
+const currency = (value) =>
+  `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+
+// Loan amounts arrive formatted from the API, e.g. "$250,000" or "—"
+const parseAmount = (value) => {
+  const n = Number(String(value ?? '').replace(/[^\d.]/g, ''))
+  return Number.isFinite(n) ? n : 0
+}
 
 function ConstructionBudgetCard({ budget }) {
-  const { total, released, remaining } = budget
-  const percentReleased = total > 0 ? Math.round((released / total) * 100) : 0
+  const { total, requested, remaining } = budget
+  const percentRequested = total > 0 ? Math.round((requested / total) * 100) : 0
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-      <h2 className="text-base font-semibold text-slate-900">Construction Budget</h2>
+      <h2 className="text-base font-semibold text-slate-900">Available Funds</h2>
       <p className="mt-1 text-sm text-slate-500">
-        Especially useful for Fix &amp; Flip and Ground-Up.
+        Draws can be requested up to your total loan amount.
       </p>
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
-          <p className="text-xs text-slate-400">Total Budget</p>
+          <p className="text-xs text-slate-400">Loan Amount</p>
           <p className="mt-1 text-xl font-bold text-slate-900">{currency(total)}</p>
         </div>
         <div>
-          <p className="text-xs text-slate-400">Released</p>
-          <p className="mt-1 text-xl font-bold text-emerald-700">{currency(released)}</p>
+          <p className="text-xs text-slate-400">Requested</p>
+          <p className="mt-1 text-xl font-bold text-emerald-700">{currency(requested)}</p>
         </div>
         <div>
-          <p className="text-xs text-slate-400">Remaining</p>
+          <p className="text-xs text-slate-400">Available</p>
           <p className="mt-1 text-xl font-bold text-slate-900">{currency(remaining)}</p>
         </div>
       </div>
 
       <div className="mt-5">
         <div className="flex items-center justify-between text-xs font-medium text-slate-500">
-          <span>{percentReleased}% released</span>
+          <span>{percentRequested}% requested</span>
           <span>{currency(total)}</span>
         </div>
         <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
           <div
             className="h-full rounded-full bg-emerald-600"
-            style={{ width: `${percentReleased}%` }}
+            style={{ width: `${percentRequested}%` }}
           />
         </div>
       </div>
@@ -62,6 +80,15 @@ function UploadField({ label, icon: Icon, files, onChange }) {
           {files.length > 0 ? `${files.length} file(s) selected` : 'Click to upload'}
         </span>
       </label>
+      {files.length > 0 && (
+        <ul className="mt-1.5 space-y-0.5">
+          {files.map((file) => (
+            <li key={file.name} className="truncate text-xs text-slate-500">
+              {file.name}
+            </li>
+          ))}
+        </ul>
+      )}
       <input
         id={inputId}
         type="file"
@@ -73,16 +100,30 @@ function UploadField({ label, icon: Icon, files, onChange }) {
   )
 }
 
-function RequestDrawForm({ onClose, onSubmit }) {
+function RequestDrawForm({ available, onClose, onSubmit }) {
   const [photos, setPhotos] = useState([])
   const [invoices, setInvoices] = useState([])
   const [inspectionFiles, setInspectionFiles] = useState([])
   const [comment, setComment] = useState('')
   const [amount, setAmount] = useState('')
+  const [error, setError] = useState('')
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    onSubmit({ amount, comment })
+    const value = Number(amount)
+    if (!amount || !Number.isFinite(value) || value <= 0) {
+      setError('Enter an amount greater than $0.')
+      return
+    }
+    if (value > available) {
+      setError(`Amount can't exceed your available funds of ${currency(available)}.`)
+      return
+    }
+    onSubmit({
+      amount: value,
+      comment,
+      documents: [...photos, ...invoices, ...inspectionFiles].map((file) => file.name),
+    })
   }
 
   return (
@@ -108,12 +149,20 @@ function RequestDrawForm({ onClose, onSubmit }) {
         </label>
         <input
           id="draw-amount"
-          type="text"
-          placeholder="$0.00"
+          type="number"
+          min="0"
+          step="0.01"
+          max={available}
+          placeholder="0.00"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={(e) => {
+            setAmount(e.target.value)
+            setError('')
+          }}
           className="mt-1.5 w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none sm:w-64"
         />
+        <p className="mt-1 text-xs text-slate-400">Available: {currency(available)}</p>
+        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -223,11 +272,13 @@ export default function DrawRequestsSection({ properties = [] }) {
   }
 
   const propertyId = selectedProperty?.id
-  const budget = selectedProperty?.constructionBudget ?? { total: 0, released: 0, remaining: 0 }
   const requests = propertyId != null ? (requestsByLoan[propertyId] ?? []) : []
-  const hasFunding = budget.total > 0
+  const total = parseAmount(selectedProperty?.loanAmount)
+  const requested = requests.reduce((sum, r) => sum + r.amount, 0)
+  const budget = { total, requested, remaining: Math.max(total - requested, 0) }
+  const hasFunding = selectedProperty?.statusKey === 'funded' && total > 0
 
-  const handleSubmit = ({ amount, comment }) => {
+  const handleSubmit = ({ amount, comment, documents }) => {
     if (propertyId == null) return
     const nextId = requests.length ? Math.max(...requests.map((r) => r.id)) + 1 : 1
     setRequestsByLoan({
@@ -236,10 +287,15 @@ export default function DrawRequestsSection({ properties = [] }) {
         {
           id: nextId,
           label: `Draw #${nextId}`,
-          amount: amount || '$0.00',
-          requestedDate: 'Today',
+          amount,
+          requestedDate: new Date().toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          }),
           stage: 0,
           comment: comment || 'No comments provided.',
+          documents,
         },
         ...requests,
       ],
@@ -265,7 +321,11 @@ export default function DrawRequestsSection({ properties = [] }) {
           <ConstructionBudgetCard budget={budget} />
 
           {formOpen ? (
-            <RequestDrawForm onClose={() => setFormOpen(false)} onSubmit={handleSubmit} />
+            <RequestDrawForm
+              available={budget.remaining}
+              onClose={() => setFormOpen(false)}
+              onSubmit={handleSubmit}
+            />
           ) : (
             <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
               <div>
@@ -279,7 +339,8 @@ export default function DrawRequestsSection({ properties = [] }) {
               <button
                 type="button"
                 onClick={() => setFormOpen(true)}
-                className="flex shrink-0 items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
+                disabled={budget.remaining <= 0}
+                className="flex shrink-0 items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Plus className="h-4 w-4" />
                 Request Draw
@@ -297,7 +358,7 @@ export default function DrawRequestsSection({ properties = [] }) {
                   <li key={request.id} className="py-5 first:pt-0 last:pb-0">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <p className="text-sm font-semibold text-slate-900">
-                        {request.label} &middot; {request.amount}
+                        {request.label} &middot; {currency(request.amount)}
                       </p>
                       <p className="text-xs text-slate-400">Requested {request.requestedDate}</p>
                     </div>
@@ -305,6 +366,12 @@ export default function DrawRequestsSection({ properties = [] }) {
                       <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                       {request.comment}
                     </p>
+                    {request.documents.length > 0 && (
+                      <p className="mt-1 flex items-start gap-1.5 text-sm text-slate-500">
+                        <Paperclip className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        {request.documents.join(', ')}
+                      </p>
+                    )}
                     <div className="mt-4">
                       <DrawStepper stage={request.stage} />
                     </div>

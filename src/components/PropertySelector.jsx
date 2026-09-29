@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
 
+const loanStage = (loan) => loan.stageName || loan.status
+
 export default function PropertySelector({ properties = [], selected, onChange }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -16,7 +18,7 @@ export default function PropertySelector({ properties = [], selected, onChange }
   if (properties.length === 0) return null
 
   const label = selected
-    ? `${selected.address ?? 'Loan'}${selected.status ? ` (${selected.status})` : ''}`
+    ? `${selected.address ?? 'Loan'}${loanStage(selected) ? ` (${loanStage(selected)})` : ''}`
     : 'Select a loan'
 
   return (
@@ -46,7 +48,7 @@ export default function PropertySelector({ properties = [], selected, onChange }
               <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
               <span className="truncate">
                 {p.address ?? 'Loan'}
-                {p.status ? ` (${p.status})` : ''}
+                {loanStage(p) ? ` (${loanStage(p)})` : ''}
               </span>
             </button>
           ))}

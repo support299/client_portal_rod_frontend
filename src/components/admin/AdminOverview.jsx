@@ -23,13 +23,15 @@ function SectionCard({ title, viewAllTo, children }) {
     <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-        <Link
-          to={viewAllTo}
-          className="flex items-center gap-0.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800"
-        >
-          View all
-          <ChevronRight className="h-3.5 w-3.5" />
-        </Link>
+        {viewAllTo && (
+          <Link
+            to={viewAllTo}
+            className="flex items-center gap-0.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+          >
+            View all
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        )}
       </div>
       {children}
     </div>
@@ -116,7 +118,7 @@ export default function AdminOverview({
         </div>
 
         <div className="space-y-6">
-          <SectionCard title="Missing Documents" viewAllTo="/admin/documents">
+          <SectionCard title="Missing Documents">
             {missingDocuments.length === 0 ? (
               <p className="mt-4 text-sm text-slate-400">No missing documents.</p>
             ) : (
@@ -133,7 +135,7 @@ export default function AdminOverview({
             )}
           </SectionCard>
 
-          <SectionCard title="Recent Uploads" viewAllTo="/admin/documents">
+          <SectionCard title="Recent Uploads">
             {recentUploads.length === 0 ? (
               <p className="mt-4 text-sm text-slate-400">No recent uploads.</p>
             ) : (

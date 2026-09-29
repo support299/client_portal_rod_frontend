@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 
-export default function ProtectedRoute({ children, staffOnly = false }) {
+export default function ProtectedRoute({ children, staffOnly = false, borrowerOnly = false }) {
   const { isAuthenticated, isStaff, bootstrapping } = useAuth()
   const location = useLocation()
 
@@ -19,6 +19,10 @@ export default function ProtectedRoute({ children, staffOnly = false }) {
 
   if (staffOnly && !isStaff) {
     return <Navigate to="/" replace />
+  }
+
+  if (borrowerOnly && isStaff) {
+    return <Navigate to="/admin" replace />
   }
 
   return children
