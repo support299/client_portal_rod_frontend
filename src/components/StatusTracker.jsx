@@ -64,30 +64,33 @@ export default function StatusTracker({ loanStages = [], currentStatus = null, s
       </div>
 
       {loanStages.length > 0 && (
-        <div className="mt-8 flex items-start">
-          {loanStages.map((stage, i) => (
-            <div key={stage.key} className="flex flex-1 items-center last:flex-none">
-              <div className="flex flex-col items-center gap-2">
-                <StageIcon state={stage.state} />
-                <span
-                  className={`whitespace-nowrap text-[11px] font-medium sm:text-sm ${
-                    stage.state === 'complete' || stage.state === 'current'
-                      ? 'text-emerald-700'
-                      : 'text-slate-400'
-                  }`}
-                >
-                  {stage.label}
-                </span>
+        // Seven steps don't fit a phone; scroll sideways instead of overflowing the card
+        <div className="-mx-5 mt-8 overflow-x-auto px-5 pb-1 sm:-mx-6 sm:px-6">
+          <div className="flex min-w-[640px] items-start">
+            {loanStages.map((stage, i) => (
+              <div key={stage.key} className="flex flex-1 items-center last:flex-none">
+                <div className="flex flex-col items-center gap-2">
+                  <StageIcon state={stage.state} />
+                  <span
+                    className={`whitespace-nowrap text-[11px] font-medium sm:text-sm ${
+                      stage.state === 'complete' || stage.state === 'current'
+                        ? 'text-emerald-700'
+                        : 'text-slate-400'
+                    }`}
+                  >
+                    {stage.label}
+                  </span>
+                </div>
+                {i < loanStages.length - 1 && (
+                  <div
+                    className={`mx-1 h-0.5 flex-1 sm:mx-2 ${
+                      stage.state === 'complete' ? 'bg-emerald-600' : 'bg-slate-200'
+                    }`}
+                  />
+                )}
               </div>
-              {i < loanStages.length - 1 && (
-                <div
-                  className={`mx-1 h-0.5 flex-1 sm:mx-2 ${
-                    stage.state === 'complete' ? 'bg-emerald-600' : 'bg-slate-200'
-                  }`}
-                />
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>

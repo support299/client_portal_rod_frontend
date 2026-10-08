@@ -9,6 +9,11 @@ import {
 
 const AuthContext = createContext(null)
 
+// Every role except borrower is an internal team member who uses the admin portal
+export function isStaffUser(user) {
+  return Boolean(user?.role) && user.role !== 'borrower'
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => getStoredUser())
   const [bootstrapping, setBootstrapping] = useState(() => Boolean(getAccessToken()))
@@ -47,12 +52,6 @@ export function AuthProvider({ children }) {
     return data
   }, [])
 
-  const register = useCallback(async (payload) => {
-    const data = await authApi.register(payload)
-    setUser(data.user)
-    return data
-  }, [])
-
   const logout = useCallback(async () => {
     await authApi.logout()
     setUser(null)
@@ -65,13 +64,12 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       isAuthenticated: Boolean(user),
-      isStaff: user?.role === 'staff' || Boolean(user?.is_admin),
+      isStaff: isStaffUser(user),
       bootstrapping,
       login,
-      register,
       logout,
     }),
-    [user, bootstrapping, login, register, logout],
+    [user, bootstrapping, login, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

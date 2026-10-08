@@ -1,11 +1,13 @@
 import { apiRequest } from './client'
 
+// For a borrower, GET /api/loans/ returns only their own loans (paginated); walk every page
 export async function fetchMyLoans() {
-  return apiRequest('/api/portal/loans/')
-}
-
-export async function fetchLoanDetail(opportunityId) {
-  return apiRequest(`/api/portal/loans/${encodeURIComponent(opportunityId)}/`)
+  const all = []
+  for (let page = 1; ; page += 1) {
+    const data = await apiRequest(`/api/loans/?page=${page}&page_size=100`)
+    all.push(...(data?.results ?? []))
+    if (!data?.next) return all
+  }
 }
 
 export async function fetchLoanDocuments(opportunityId) {

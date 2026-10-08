@@ -2,11 +2,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './common/auth/AuthContext'
 import ProtectedRoute from './common/auth/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
 import Dashboard from './pages/Dashboard'
 import AdminLayout from './pages/AdminLayout'
 import AdminOverview from './components/admin/AdminOverview'
 import PipelineSection from './components/admin/PipelineSection'
+import LoansSection from './components/admin/LoansSection'
 import TasksSection from './components/admin/TasksSection'
 import LoanDetailSection from './components/admin/LoanDetailSection'
 import DocumentsSection from './components/admin/DocumentsSection'
@@ -15,6 +15,7 @@ import NotesSection from './components/admin/NotesSection'
 import CrmSection from './components/admin/CrmSection'
 import CommunicationsSection from './components/admin/CommunicationsSection'
 import UsersSection from './components/admin/UsersSection'
+import BorrowersSection from './components/admin/BorrowersSection'
 
 function App() {
   return (
@@ -22,7 +23,6 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
 
           <Route
             path="/"
@@ -43,6 +43,7 @@ function App() {
           >
             <Route index element={<AdminOverview />} />
             <Route path="pipeline" element={<PipelineSection />} />
+            <Route path="loans" element={<LoansSection />} />
             <Route path="tasks" element={<TasksSection />} />
             <Route path="loans/:loanNumber" element={<LoanDetailSection />} />
             <Route path="documents" element={<DocumentsSection />} />
@@ -51,6 +52,7 @@ function App() {
             <Route path="crm" element={<CrmSection />} />
             <Route path="communications" element={<CommunicationsSection />} />
             <Route path="users" element={<UsersSection />} />
+            <Route path="borrowers" element={<BorrowersSection />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

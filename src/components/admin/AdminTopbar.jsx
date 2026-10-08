@@ -18,7 +18,7 @@ function StaffAvatar({ name, avatar, className }) {
 export default function AdminTopbar({ onMenuClick }) {
   const { user, logout } = useAuth()
   const name = user?.full_name || user?.email || ''
-  const role = user?.role === 'staff' ? 'Staff' : user?.role || ''
+  const role = user?.role_label || user?.role || ''
   const avatar = user?.avatar_url || ''
   const notificationCount = 0
 

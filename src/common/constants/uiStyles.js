@@ -1,7 +1,12 @@
+// Keyed by Loan.Status label, as the borrower dashboard shows it
 export const loanStatusStyles = {
+  'Application Received': 'bg-slate-100 text-slate-600',
   Processing: 'bg-blue-100 text-blue-700',
-  Funded: 'bg-emerald-100 text-emerald-700',
   Underwriting: 'bg-amber-100 text-amber-800',
+  Appraisal: 'bg-orange-100 text-orange-700',
+  'Final Approval': 'bg-cyan-100 text-cyan-700',
+  Closing: 'bg-purple-100 text-purple-700',
+  Funded: 'bg-emerald-100 text-emerald-700',
 }
 
 export const dealHealthConfig = {
@@ -36,12 +41,13 @@ export const crmSyncStyles = {
 }
 
 export const userRoleStyles = {
-  BORROWER: 'bg-slate-100 text-slate-600',
-  LOAN_OFFICER: 'bg-emerald-100 text-emerald-700',
-  PROCESSOR: 'bg-blue-100 text-blue-700',
-  CLOSER: 'bg-purple-100 text-purple-700',
-  DRAW_SPECIALIST: 'bg-amber-100 text-amber-800',
-  ADMIN: 'bg-red-100 text-red-700',
+  borrower: 'bg-slate-100 text-slate-600',
+  loan_officer: 'bg-emerald-100 text-emerald-700',
+  processor: 'bg-blue-100 text-blue-700',
+  closer: 'bg-purple-100 text-purple-700',
+  draw_specialist: 'bg-amber-100 text-amber-800',
+  accounting: 'bg-cyan-100 text-cyan-700',
+  admin: 'bg-red-100 text-red-700',
 }
 
 export const drawRequestStages = ['Submitted', 'Inspection Ordered', 'Approved', 'Funds Sent']

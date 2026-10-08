@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Landmark } from 'lucide-react'
-import { useAuth } from '../common/auth/AuthContext'
+import { isStaffUser, useAuth } from '../common/auth/AuthContext'
 
 export default function LoginPage() {
   const { login, isAuthenticated, bootstrapping } = useAuth()
@@ -32,7 +32,7 @@ export default function LoginPage() {
     setSubmitting(true)
     try {
       const data = await login({ email: email.trim(), password })
-      const dest = data.user?.role === 'staff' || data.user?.is_admin ? '/admin' : from === '/login' ? '/' : from
+      const dest = isStaffUser(data.user) ? '/admin' : from === '/login' ? '/' : from
       navigate(dest, { replace: true })
     } catch (err) {
       setError(err.message || 'Unable to sign in')
@@ -127,13 +127,6 @@ export default function LoginPage() {
               {submitting ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
-
-          <p className="mt-6 text-center text-sm text-slate-500">
-            New investor?{' '}
-            <Link to="/register" className="font-semibold text-emerald-700 hover:text-emerald-800">
-              Create an account
-            </Link>
-          </p>
         </div>
       </div>
     </div>

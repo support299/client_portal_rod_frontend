@@ -36,7 +36,7 @@ export default function Dashboard() {
     })
   }, [loans])
 
-  const { detail, loading: detailLoading } = useLoanDetail(selectedProperty?.id)
+  const { detail, loading: detailLoading } = useLoanDetail(selectedProperty)
 
   const openLoanDashboard = (property) => {
     setSelectedProperty(property)
