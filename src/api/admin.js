@@ -18,8 +18,46 @@ export async function fetchLoans(params = {}) {
   return apiRequest(`/api/loans/?${query}`)
 }
 
+function queryString(params) {
+  return new URLSearchParams(Object.entries(params).filter(([, v]) => v !== '' && v != null))
+}
+
+// Webhook deliveries received from GHL (admin only; the list has no payload)
+export async function fetchWebhookLogs(params = {}) {
+  return apiRequest(`/api/crm/webhook/logs/?${queryString(params)}`)
+}
+
+export async function fetchWebhookLog(id) {
+  return apiRequest(`/api/crm/webhook/logs/${id}/`)
+}
+
+// Calls we made to GHL (admin only; the list has no request/response bodies)
+export async function fetchOutboundLogs(params = {}) {
+  return apiRequest(`/crm/outbound-logs/?${queryString(params)}`)
+}
+
+export async function fetchOutboundLog(id) {
+  return apiRequest(`/crm/outbound-logs/${id}/`)
+}
+
+export async function fetchLoan(id) {
+  return apiRequest(`/api/loans/${id}/`)
+}
+
+// The loan pipeline's stages in order; a loan's status is one of these ids
+export async function fetchLoanStages() {
+  return apiRequest('/api/loans/stages/')
+}
+
 export async function updateLoan(id, payload) {
   return apiRequest(`/api/loans/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function updateOpportunity(opportunityId, payload) {
+  return apiRequest(`/crm/opportunities/${encodeURIComponent(opportunityId)}/`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   })

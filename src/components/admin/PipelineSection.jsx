@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, Mail, Phone, Search, X } from 'lucide-react'
-import { createLoanFromOpportunity, fetchOpportunities, fetchOpportunityFilters } from '../../api/admin'
+import { CheckCircle2, Mail, Pencil, Phone, Search, X } from 'lucide-react'
+import {
+  createLoanFromOpportunity,
+  fetchOpportunities,
+  fetchOpportunityFilters,
+  updateOpportunity,
+} from '../../api/admin'
+import { useAuth } from '../../common/auth/AuthContext'
 import { currency, customFieldValue, formatDate } from '../../utils/format'
 import { DetailGroup, DetailRow } from './DetailList'
 
@@ -34,6 +40,240 @@ async function fetchAllOpportunities(params) {
     all.push(...(data?.results ?? []))
     if (!data?.next) return all
   }
+}
+
+const inputClass =
+  'mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none'
+
+// DRF returns { field: [messages] } for validation errors, { error } for GHL/permission errors
+function errorMessage(err) {
+  const data = err?.data
+  if (data?.error) return data.error
+  if (data && typeof data === 'object' && !data.detail) {
+    const [field, messages] = Object.entries(data)[0] ?? []
+    const message = Array.isArray(messages) ? messages[0] : messages
+    if (message) return `${field.replace(/_/g, ' ')}: ${message}`
+  }
+  return err?.message || 'Request failed'
+}
+
+function formFromOpportunity(o) {
+  return {
+    name: o.name ?? '',
+    monetary_value: o.monetary_value ?? '',
+    status: o.status ?? '',
+    pipeline_stage_id: o.pipeline_stage_id ?? '',
+    expected_close_date: o.expected_close_date ?? '',
+    assigned_to: o.assigned_to ?? '',
+    source: o.source ?? '',
+    original_close_date: o.original_close_date ?? '',
+    forecast_probability: o.forecast_probability ?? '',
+    effective_probability: o.effective_probability ?? '',
+  }
+}
+
+// Fields saved in the dashboard only; GHL has no update field for them
+const LOCAL_ONLY = ['source', 'original_close_date', 'forecast_probability', 'effective_probability']
+const NULLABLE = ['expected_close_date', 'original_close_date', 'forecast_probability', 'effective_probability']
+
+function OpportunityEditForm({ opportunity, stages, statuses, assignees, canReassign, onCancel, onSaved }) {
+  const original = useMemo(() => formFromOpportunity(opportunity), [opportunity])
+  const [form, setForm] = useState(original)
+  const [reviewing, setReviewing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const fields = {
+    name: ['Name', (v) => v || '—'],
+    monetary_value: ['Value', (v) => (Number(v) ? currency.format(Number(v)) : '$0')],
+    status: ['Status', (v) => statuses.find((s) => s.value === v)?.label ?? (v || '—')],
+    pipeline_stage_id: ['Stage', (v) => stages.find((s) => s.id === v)?.name ?? (v || '—')],
+    expected_close_date: ['Expected close', (v) => formatDate(v) || 'Not set'],
+    assigned_to: ['Assigned to', (v) => assignees.find((u) => u.user_id === v)?.name ?? (v || 'Unassigned')],
+    source: ['Source', (v) => v || '—'],
+    original_close_date: ['Original close', (v) => formatDate(v) || 'Not set'],
+    forecast_probability: ['Forecast probability', (v) => (v === '' ? 'Not set' : `${v}%`)],
+    effective_probability: ['Effective probability', (v) => (v === '' ? 'Not set' : `${v}%`)],
+  }
+  const changes = Object.keys(fields)
+    .filter((k) => (k !== 'assigned_to' || canReassign) && String(form[k]) !== String(original[k]))
+    .map((k) => ({
+      key: k,
+      label: fields[k][0],
+      from: fields[k][1](original[k]),
+      to: fields[k][1](form[k]),
+      local: LOCAL_ONLY.includes(k),
+    }))
+
+  function handleChange(e) {
+    const { name, value } = e.target
+    setForm((f) => ({ ...f, [name]: value }))
+  }
+
+  async function handleAccept() {
+    const payload = {}
+    for (const { key } of changes) {
+      payload[key] = NULLABLE.includes(key) && form[key] === '' ? null : form[key]
+    }
+    setSaving(true)
+    setError('')
+    try {
+      onSaved(await updateOpportunity(opportunity.opportunity_id, payload))
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (reviewing) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-slate-600">Review your changes. Nothing is saved until you accept.</p>
+        {changes.length === 0 ? (
+          <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">No changes were made.</p>
+        ) : (
+          <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+            {changes.map((c) => (
+              <li key={c.key} className="grid grid-cols-1 gap-1 px-4 py-3 text-sm sm:grid-cols-3 sm:gap-3">
+                <span className="font-medium text-slate-500">
+                  {c.label}
+                  {c.local && <span className="block text-[11px] font-normal text-amber-600">Dashboard only</span>}
+                </span>
+                <span className="text-slate-400 line-through">{c.from}</span>
+                <span className="font-semibold text-slate-900">{c.to}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {changes.some((c) => !c.local) && (
+          <p className="text-xs text-slate-500">Changes to the other fields are sent to GoHighLevel.</p>
+        )}
+        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={() => setReviewing(false)}
+            disabled={saving}
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+          >
+            Decline
+          </button>
+          <button
+            type="button"
+            onClick={handleAccept}
+            disabled={saving || changes.length === 0}
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+          >
+            {saving ? 'Saving…' : 'Accept & Save'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        setError('')
+        setReviewing(true)
+      }}
+      className="space-y-4"
+    >
+      <div>
+        <label htmlFor="opp-name" className="text-xs font-medium text-slate-500">Name</label>
+        <input id="opp-name" name="name" value={form.name} onChange={handleChange} className={inputClass} />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="opp-value" className="text-xs font-medium text-slate-500">Value ($)</label>
+          <input
+            id="opp-value" name="monetary_value" type="number" min="0" step="0.01"
+            value={form.monetary_value} onChange={handleChange} className={inputClass}
+          />
+        </div>
+        <div>
+          <label htmlFor="opp-status" className="text-xs font-medium text-slate-500">Status</label>
+          <select id="opp-status" name="status" value={form.status} onChange={handleChange} className={inputClass}>
+            {statuses.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="opp-stage" className="text-xs font-medium text-slate-500">Stage</label>
+          <select id="opp-stage" name="pipeline_stage_id" value={form.pipeline_stage_id} onChange={handleChange} className={inputClass}>
+            {stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="opp-close" className="text-xs font-medium text-slate-500">Expected close</label>
+          <input
+            id="opp-close" name="expected_close_date" type="date"
+            value={form.expected_close_date} onChange={handleChange} className={inputClass}
+          />
+        </div>
+      </div>
+      {canReassign ? (
+        <div>
+          <label htmlFor="opp-assigned" className="text-xs font-medium text-slate-500">Assigned to</label>
+          <select id="opp-assigned" name="assigned_to" value={form.assigned_to} onChange={handleChange} className={inputClass}>
+            {!form.assigned_to && <option value="">Unassigned</option>}
+            {assignees.map((u) => <option key={u.user_id} value={u.user_id}>{u.name || u.email}</option>)}
+          </select>
+        </div>
+      ) : (
+        <p className="text-xs text-slate-500">
+          Assigned to: <span className="font-medium text-slate-700">{opportunity.assigned_to_name || 'Unassigned'}</span>
+          {' '}&middot; only admins can reassign.
+        </p>
+      )}
+
+      <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-4">
+        <p className="text-xs font-semibold text-amber-700">Dashboard only</p>
+        <p className="text-xs text-slate-500">GoHighLevel can't update these. A later sync from GHL may overwrite them.</p>
+        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="opp-source" className="text-xs font-medium text-slate-500">Source</label>
+            <input id="opp-source" name="source" value={form.source} onChange={handleChange} className={inputClass} />
+          </div>
+          <div>
+            <label htmlFor="opp-original" className="text-xs font-medium text-slate-500">Original close</label>
+            <input
+              id="opp-original" name="original_close_date" type="date"
+              value={form.original_close_date} onChange={handleChange} className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="opp-fprob" className="text-xs font-medium text-slate-500">Forecast probability (%)</label>
+            <input
+              id="opp-fprob" name="forecast_probability" type="number" min="0" max="100"
+              value={form.forecast_probability} onChange={handleChange} className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="opp-eprob" className="text-xs font-medium text-slate-500">Effective probability (%)</label>
+            <input
+              id="opp-eprob" name="effective_probability" type="number" min="0" max="100"
+              value={form.effective_probability} onChange={handleChange} className={inputClass}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+        >
+          Cancel
+        </button>
+        <button type="submit" className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
+          Review Changes
+        </button>
+      </div>
+    </form>
+  )
 }
 
 function ConvertToLoan({ opportunity, onConverted }) {
@@ -118,7 +358,10 @@ function ConvertToLoan({ opportunity, onConverted }) {
   )
 }
 
-function OpportunityDetail({ opportunity, onClose, onConverted }) {
+function OpportunityDetail({ opportunity, stages, statuses, assignees, onClose, onConverted, onUpdated }) {
+  const [mode, setMode] = useState('view')
+  const { user } = useAuth()
+  const canReassign = user?.role === 'admin'
   const { contact } = opportunity
   const value = Number(opportunity.monetary_value)
   const customFields = (Array.isArray(opportunity.custom_fields) ? opportunity.custom_fields : [])
@@ -132,12 +375,12 @@ function OpportunityDetail({ opportunity, onClose, onConverted }) {
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/60" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4" onClick={onClose}>
       <aside
         role="dialog"
         aria-modal="true"
         aria-label={opportunity.name || 'Opportunity details'}
-        className="flex h-full w-full max-w-lg flex-col bg-white shadow-xl"
+        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3 border-b border-slate-200 p-5 sm:p-6">
@@ -156,17 +399,44 @@ function OpportunityDetail({ opportunity, onClose, onConverted }) {
               </span>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            {mode === 'view' && (
+              <button
+                type="button"
+                onClick={() => setMode('edit')}
+                className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 space-y-6 overflow-y-auto p-5 sm:p-6">
+          {mode === 'edit' ? (
+            <OpportunityEditForm
+              opportunity={opportunity}
+              stages={stages}
+              statuses={statuses}
+              assignees={assignees}
+              canReassign={canReassign}
+              onCancel={() => setMode('view')}
+              onSaved={(saved) => {
+                onUpdated(saved)
+                setMode('view')
+              }}
+            />
+          ) : (
+          <>
           <DetailGroup title="Deal">
             <DetailRow label="Value">{value ? currency.format(value) : null}</DetailRow>
             <DetailRow label="Assigned to">{opportunity.assigned_to_name}</DetailRow>
@@ -228,11 +498,15 @@ function OpportunityDetail({ opportunity, onClose, onConverted }) {
           )}
 
           <p className="text-xs text-slate-400">Opportunity ID: {opportunity.opportunity_id}</p>
+          </>
+          )}
         </div>
 
-        <div className="border-t border-slate-200 p-5 sm:p-6">
-          <ConvertToLoan key={opportunity.id} opportunity={opportunity} onConverted={onConverted} />
-        </div>
+        {mode === 'view' && (
+          <div className="border-t border-slate-200 p-5 sm:p-6">
+            <ConvertToLoan key={opportunity.id} opportunity={opportunity} onConverted={onConverted} />
+          </div>
+        )}
       </aside>
     </div>
   )
@@ -283,8 +557,15 @@ export default function PipelineSection() {
   const [loadingFilters, setLoadingFilters] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [assignees, setAssignees] = useState([])
   const [selected, setSelected] = useState(null)
   const closeDetail = useCallback(() => setSelected(null), [])
+
+  // The edit response has no stage/pipeline names of its own refresh issues, so merge it over the list copy
+  const handleUpdated = useCallback((saved) => {
+    setOpportunities((list) => list.map((o) => (o.id === saved.id ? { ...o, ...saved } : o)))
+    setSelected((o) => (o && o.id === saved.id ? { ...o, ...saved } : o))
+  }, [])
 
   const handleConverted = useCallback((opportunity, loanId) => {
     const mark = (o) => (o.id === opportunity.id ? { ...o, loan_id: loanId } : o)
@@ -299,6 +580,7 @@ export default function PipelineSection() {
         if (cancelled) return
         setPipelines(data?.pipelines ?? [])
         setStatuses(data?.statuses ?? [])
+        setAssignees(data?.assigned_to ?? [])
         setPipelineId(data?.pipelines?.[0]?.id ?? '')
       })
       .catch((err) => !cancelled && setError(err.message || 'Failed to load pipelines'))
@@ -429,7 +711,18 @@ export default function PipelineSection() {
         </div>
       </div>
 
-      {selected && <OpportunityDetail opportunity={selected} onClose={closeDetail} onConverted={handleConverted} />}
+      {selected && (
+        <OpportunityDetail
+          key={selected.id}
+          opportunity={selected}
+          stages={stages}
+          statuses={statuses}
+          assignees={assignees}
+          onClose={closeDetail}
+          onConverted={handleConverted}
+          onUpdated={handleUpdated}
+        />
+      )}
     </div>
   )
 }
