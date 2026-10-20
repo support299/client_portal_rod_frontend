@@ -137,6 +137,7 @@ export default function Dashboard() {
               sectionId={activeSection}
               onBack={() => setActiveSection('dashboard')}
               onSelectLoan={openLoanDashboard}
+              onChangeLoan={setSelectedProperty}
               loans={loans}
               selectedLoan={selectedProperty}
               loanDetail={detail}

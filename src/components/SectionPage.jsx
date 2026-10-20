@@ -1,4 +1,5 @@
 import { ArrowLeft, Construction, ChevronRight } from 'lucide-react'
+import { useAuth } from '../common/auth/AuthContext'
 import { getSection } from '../common/constants/nav'
 import { loanStatusStyles } from '../common/constants/uiStyles'
 import DealHealthBadge from './DealHealthBadge'
@@ -190,10 +191,12 @@ export default function SectionPage({
   sectionId,
   onBack,
   onSelectLoan,
+  onChangeLoan,
   loans = [],
   selectedLoan = null,
   loanDetail = null,
 }) {
+  const { user } = useAuth()
   const section = getSection(sectionId)
   const label = section?.label ?? 'Section'
   const subtitle = sectionSubtitles[sectionId]
@@ -211,8 +214,10 @@ export default function SectionPage({
     case 'documents':
       content = (
         <DocumentCenterSection
-          documentsNeeded={docs.documentsNeeded}
-          documentsSent={docs.documentsSent}
+          loans={loans}
+          selectedLoan={selectedLoan}
+          onChangeLoan={onChangeLoan}
+          userId={user?.id}
         />
       )
       break

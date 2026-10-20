@@ -47,11 +47,13 @@ function enqueueRefresh() {
 
 /**
  * Authenticated API helper. Auto-rotates refresh on 401 once.
+ * A FormData body is sent as multipart; responseType: 'blob' returns the body as a Blob.
  */
 export async function apiRequest(path, options = {}) {
-  const { skipAuth = false, headers: customHeaders, ...rest } = options
+  const { skipAuth = false, headers: customHeaders, responseType, ...rest } = options
   const headers = {
-    'Content-Type': 'application/json',
+    // The browser sets the multipart boundary itself
+    ...(!(rest.body instanceof FormData) && { 'Content-Type': 'application/json' }),
     ...customHeaders,
   }
 
@@ -73,6 +75,8 @@ export async function apiRequest(path, options = {}) {
     }
   }
 
+  if (responseType === 'blob' && res.ok) return res.blob()
+
   let data = null
   const text = await res.text()
   if (text) {
@@ -86,6 +90,7 @@ export async function apiRequest(path, options = {}) {
   if (!res.ok) {
     const message =
       data?.detail ||
+      data?.error ||
       data?.email?.[0] ||
       data?.password?.[0] ||
       data?.non_field_errors?.[0] ||

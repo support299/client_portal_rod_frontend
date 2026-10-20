@@ -10,6 +10,7 @@ import LoansSection from './components/admin/LoansSection'
 import TasksSection from './components/admin/TasksSection'
 import LoanDetailSection from './components/admin/LoanDetailSection'
 import DocumentsSection from './components/admin/DocumentsSection'
+import DocumentTypesSection from './components/admin/DocumentTypesSection'
 import MilestonesSection from './components/admin/MilestonesSection'
 import NotesSection from './components/admin/NotesSection'
 import CrmSection from './components/admin/CrmSection'
@@ -47,6 +48,7 @@ function App() {
             <Route path="tasks" element={<TasksSection />} />
             <Route path="loans/:loanNumber" element={<LoanDetailSection />} />
             <Route path="documents" element={<DocumentsSection />} />
+            <Route path="document-types" element={<DocumentTypesSection />} />
             <Route path="milestones" element={<MilestonesSection />} />
             <Route path="notes" element={<NotesSection />} />
             <Route path="crm" element={<CrmSection />} />
