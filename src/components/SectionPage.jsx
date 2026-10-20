@@ -192,6 +192,7 @@ export default function SectionPage({
   onBack,
   onSelectLoan,
   onChangeLoan,
+  onNavigate,
   loans = [],
   selectedLoan = null,
   loanDetail = null,
@@ -225,7 +226,15 @@ export default function SectionPage({
       content = <LoanSummarySection loanSummaries={summaries} />
       break
     case 'messages':
-      content = <ChatPanel />
+      content = (
+        <ChatPanel
+          onOpenDocuments={(loanId) => {
+            const loan = loans.find((l) => l.id === loanId)
+            if (loan) onChangeLoan?.(loan)
+            onNavigate?.('documents')
+          }}
+        />
+      )
       break
     case 'calendar':
       content = <CalendarSection properties={loans} />

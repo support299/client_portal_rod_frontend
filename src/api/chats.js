@@ -31,6 +31,29 @@ export async function sendMessage(chatId, body) {
   return postJson(`/api/chats/${chatId}/messages/`, { body })
 }
 
+// Loan chats only: send a file (stored as one of the loan's documents), with an optional message
+// body; pass request (a document request id) when the file answers a request
+export async function sendChatFile(chatId, { file, body, request }) {
+  const form = new FormData()
+  form.append('file', file)
+  if (body) form.append('body', body)
+  if (request != null) form.append('request', request)
+  return apiRequest(`/api/chats/${chatId}/attachments/`, { method: 'POST', body: form })
+}
+
+// Staff, loan chats only: request a document; returns the posted document_request message.
+// payload as for createDocumentRequest (form_file may be a File)
+export async function requestDocumentInChat(chatId, payload) {
+  const fields = Object.entries(payload).filter(([, v]) => v != null)
+  const hasFile = fields.some(([, v]) => v instanceof File)
+  const form = new FormData()
+  fields.forEach(([k, v]) => form.append(k, v))
+  return apiRequest(`/api/chats/${chatId}/document-requests/`, {
+    method: 'POST',
+    body: hasFile ? form : JSON.stringify(Object.fromEntries(fields)),
+  })
+}
+
 export async function markChatRead(chatId) {
   return postJson(`/api/chats/${chatId}/read/`)
 }

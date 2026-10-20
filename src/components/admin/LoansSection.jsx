@@ -458,9 +458,9 @@ const panelTabs = [
   { id: 'documents', label: 'Documents' },
 ]
 
-function LoanPanel({ loan, stages, mode, canReassign, onModeChange, onClose, onSaved }) {
+function LoanPanel({ loan, stages, mode, canReassign, onModeChange, onClose, onSaved, initialTab = 'details' }) {
   const [saving, setSaving] = useState(false)
-  const [tab, setTab] = useState('details')
+  const [tab, setTab] = useState(initialTab)
   const close = () => !saving && onClose()
 
   useEffect(() => {
@@ -556,8 +556,9 @@ function LoanPanel({ loan, stages, mode, canReassign, onModeChange, onClose, onS
   )
 }
 
-// The loan panel for one loan by id, for pages outside this list (e.g. a loan's chat on Messages)
-export function LoanModal({ loanId, onClose }) {
+// The loan panel for one loan by id, for pages outside this list (e.g. a loan's chat on Messages);
+// initialTab: 'details' or 'documents'
+export function LoanModal({ loanId, onClose, initialTab }) {
   const [loan, setLoan] = useState(null)
   const [error, setError] = useState('')
   const [mode, setMode] = useState('view')
@@ -605,6 +606,7 @@ export function LoanModal({ loanId, onClose }) {
       onModeChange={setMode}
       onClose={onClose}
       onSaved={setLoan}
+      initialTab={initialTab}
     />
   )
 }

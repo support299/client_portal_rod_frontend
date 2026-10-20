@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
+  FilePlus2,
   FileText,
   Landmark,
   Loader2,
@@ -9,6 +10,7 @@ import {
   Plus,
   Search,
   Send,
+  Upload,
   User,
   UserPlus,
   Users,
@@ -16,7 +18,10 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../common/auth/AuthContext'
 import * as chatApi from '../../api/chats'
+import { fetchDocumentFile, fetchDocumentTypes, openBlob } from '../../api/documents'
 import { useChatSocket } from '../../hooks/useChatSocket'
+import { formatDate } from '../../utils/format'
+import { RequestForm } from '../admin/LoanDocuments'
 import { LoanModal } from '../admin/LoansSection'
 
 const kindIcons = { loan: Landmark, group: Users, direct: User }
@@ -53,8 +58,60 @@ function formatFileSize(bytes) {
 function preview(chat) {
   const last = chat.last_message
   if (!last) return 'No messages yet'
-  if (last.kind === 'document_request') return `Document requested: ${last.body}`
-  return last.body || 'Attachment'
+  // A document request's body starts with "Document requested: <name>"
+  if (last.kind === 'document_request') return last.body.split('\n')[0]
+  return last.body || 'Sent a file'
+}
+
+// Keyed by DocumentRequest.Status
+const requestBadges = {
+  requested: ['Needed', 'bg-amber-100 text-amber-800'],
+  needs_revision: ['Needs revision', 'bg-amber-100 text-amber-800'],
+  rejected: ['Rejected', 'bg-red-100 text-red-700'],
+  pending_review: ['In review', 'bg-blue-100 text-blue-700'],
+  uploaded: ['Received', 'bg-emerald-100 text-emerald-700'],
+}
+
+// Keep request cards current as messages arrive: a file sent in a loan chat answers its request,
+// which then waits for review; a newer card for the same request (e.g. after a rejection)
+// replaces the older one, which falls back to plain text, as it does when loaded from the API
+function updateRequestCards(messages, message) {
+  const answered = new Set(message.attachments?.map((a) => a.request).filter(Boolean))
+  const moved = message.document_request?.id
+  if (answered.size === 0 && moved == null) return messages
+  return messages.map((m) => {
+    const request = m.document_request
+    if (!request || m.id === message.id) return m
+    if (request.id === moved) return { ...m, document_request: null }
+    if (answered.has(request.id) && request.status !== 'uploaded') {
+      return { ...m, document_request: { ...request, status: 'pending_review' } }
+    }
+    return m
+  })
+}
+
+async function openFile(file, onError) {
+  try {
+    openBlob(await fetchDocumentFile(file.download_url))
+  } catch (err) {
+    onError(chatApi.chatErrorText(err, 'Could not open the file'))
+  }
+}
+
+// Hidden file input; ref.current.click() opens the picker
+function HiddenFileInput({ inputRef, onFile }) {
+  return (
+    <input
+      ref={inputRef}
+      type="file"
+      className="hidden"
+      onChange={(e) => {
+        const file = e.target.files?.[0]
+        e.target.value = ''
+        if (file) onFile(file)
+      }}
+    />
+  )
 }
 
 function chatSubtitle(chat, isStaff) {
@@ -351,7 +408,92 @@ function GroupMembers({ chat, me, onChanged, onLeft }) {
   )
 }
 
-function MessageItem({ message, mine, showSender }) {
+function DocumentRequestCard({ request, body, isStaff, onUpload, onOpenDocuments, onError }) {
+  const input = useRef(null)
+  const [uploading, setUploading] = useState(false)
+  const [label, classes] = requestBadges[request.status] ?? requestBadges.requested
+  const awaitingFile = ['requested', 'needs_revision', 'rejected'].includes(request.status)
+  const revision = ['needs_revision', 'rejected'].includes(request.status)
+  // A rejection's message starts with which file wasn't accepted
+  const headline = revision && body && !body.startsWith('Document requested') ? body.split('\n')[0] : null
+
+  async function upload(file) {
+    setUploading(true)
+    try {
+      await onUpload(file, request.id)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="w-72 max-w-full rounded-xl bg-white p-3 text-slate-800 ring-1 ring-slate-200">
+      <div className="flex items-start gap-2">
+        <FileText className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            {revision ? 'New version needed' : 'Document requested'}
+          </p>
+          <p className="text-sm font-semibold">{request.name}</p>
+        </div>
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${classes}`}>{label}</span>
+      </div>
+      {headline && <p className="mt-1.5 text-xs text-slate-700">{headline}</p>}
+      {request.description && <p className="mt-1.5 whitespace-pre-wrap text-xs text-slate-600">{request.description}</p>}
+      {request.due_date && <p className="mt-1 text-xs text-slate-500">Due {formatDate(request.due_date)}</p>}
+      {request.reviewer_note && ['needs_revision', 'rejected'].includes(request.status) && (
+        <p className="mt-1.5 rounded-lg bg-amber-50 px-2 py-1.5 text-xs text-amber-800">Reason: {request.reviewer_note}</p>
+      )}
+      {request.form_document && (
+        <button
+          type="button"
+          onClick={() => openFile(request.form_document, onError)}
+          className="mt-2 flex w-full items-center gap-1.5 rounded-lg bg-purple-50 px-2 py-1.5 text-left text-xs font-medium text-purple-800 hover:bg-purple-100"
+        >
+          <FileText className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">Form to fill in: {request.form_document.name}</span>
+        </button>
+      )}
+      {request.status !== 'uploaded' && (
+        <>
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={() => input.current?.click()}
+            className={`mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-60 ${
+              awaitingFile && !isStaff
+                ? 'bg-emerald-700 text-white hover:bg-emerald-800'
+                : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            {uploading
+              ? 'Uploading…'
+              : isStaff
+                ? 'Upload for borrower'
+                : revision
+                  ? 'Upload new version'
+                  : awaitingFile
+                    ? 'Upload'
+                    : 'Add another file'}
+          </button>
+          <HiddenFileInput inputRef={input} onFile={upload} />
+        </>
+      )}
+      {onOpenDocuments && (
+        <button
+          type="button"
+          onClick={onOpenDocuments}
+          className="mt-1.5 w-full text-center text-xs font-semibold text-emerald-700 hover:underline"
+        >
+          Open Documents
+        </button>
+      )}
+    </div>
+  )
+}
+
+function MessageItem({ message, mine, showSender, isStaff, onUploadForRequest, onOpenDocuments, onError }) {
   if (message.kind === 'system') {
     return (
       <li className="flex justify-center">
@@ -364,6 +506,27 @@ function MessageItem({ message, mine, showSender }) {
 
   const bubble = mine ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-800'
   const meta = mine ? 'text-emerald-100' : 'text-slate-400'
+
+  if (message.kind === 'document_request' && message.document_request) {
+    return (
+      <li className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+        <div className="max-w-[85%] sm:max-w-[70%]">
+          {showSender && !mine && (
+            <p className="mb-0.5 text-xs font-semibold text-slate-600">{displayName(message.sender)}</p>
+          )}
+          <DocumentRequestCard
+            request={message.document_request}
+            body={message.body}
+            isStaff={isStaff}
+            onUpload={onUploadForRequest}
+            onOpenDocuments={onOpenDocuments}
+            onError={onError}
+          />
+          <p className={`mt-1 text-[11px] text-slate-400 ${mine ? 'text-right' : ''}`}>{formatTime(message.created_at)}</p>
+        </div>
+      </li>
+    )
+  }
 
   return (
     <li className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
@@ -387,7 +550,17 @@ function MessageItem({ message, mine, showSender }) {
             {message.attachments.map((file) => (
               <li key={file.id} className="flex items-center gap-2 text-sm">
                 <Paperclip className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{file.name}</span>
+                {file.download_url ? (
+                  <button
+                    type="button"
+                    onClick={() => openFile(file, onError)}
+                    className="truncate text-left font-medium underline-offset-2 hover:underline"
+                  >
+                    {file.name}
+                  </button>
+                ) : (
+                  <span className="truncate">{file.name}</span>
+                )}
                 <span className={`shrink-0 text-[11px] ${meta}`}>{formatFileSize(file.size)}</span>
               </li>
             ))}
@@ -399,32 +572,61 @@ function MessageItem({ message, mine, showSender }) {
   )
 }
 
-function ChatThread({ chat, thread, me, isStaff, onBack, onLoadOlder, onSent, onChatChanged, onLeft, onShowLoan }) {
+function ChatThread({
+  chat, thread, me, isStaff, onBack, onLoadOlder, onSent, onChatChanged, onLeft, onShowLoan, onOpenDocuments,
+}) {
   const [draft, setDraft] = useState('')
+  const [file, setFile] = useState(null)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [showMembers, setShowMembers] = useState(false)
+  const [requesting, setRequesting] = useState(false)
+  const [documentTypes, setDocumentTypes] = useState(null)
   const bottomRef = useRef(null)
+  const fileInput = useRef(null)
   const lastId = thread?.messages.at(-1)?.id
+  // Files and document requests belong to a loan, so only loan chats have them
+  const isLoanChat = chat.kind === 'loan'
 
   // Follow new messages at the bottom; loading older ones doesn't change the last id.
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' })
   }, [lastId, chat.id])
 
+  // The document types for the request form, loaded the first time it opens
+  useEffect(() => {
+    if (!requesting || documentTypes) return
+    fetchDocumentTypes()
+      .then((data) => setDocumentTypes(data ?? []))
+      .catch(() => setDocumentTypes([]))
+  }, [requesting, documentTypes])
+
   async function send() {
     const body = draft.trim()
-    if (!body || sending) return
+    if ((!body && !file) || sending) return
     setSending(true)
     setError('')
     try {
-      const message = await chatApi.sendMessage(chat.id, body)
+      const message = file
+        ? await chatApi.sendChatFile(chat.id, { file, body })
+        : await chatApi.sendMessage(chat.id, body)
       setDraft('')
+      setFile(null)
       onSent(chat.id, message)
     } catch (err) {
-      setError(chatApi.chatErrorText(err, 'Message not sent'))
+      setError(chatApi.chatErrorText(err, file ? 'File not sent' : 'Message not sent'))
     } finally {
       setSending(false)
+    }
+  }
+
+  // Answer a document request with a file, from its card
+  async function uploadForRequest(requestFile, requestId) {
+    setError('')
+    try {
+      onSent(chat.id, await chatApi.sendChatFile(chat.id, { file: requestFile, request: requestId }))
+    } catch (err) {
+      setError(chatApi.chatErrorText(err, 'File not sent'))
     }
   }
 
@@ -454,6 +656,16 @@ function ChatThread({ chat, thread, me, isStaff, onBack, onLoadOlder, onSent, on
           >
             <Landmark className="h-3.5 w-3.5" />
             Loan details
+          </button>
+        )}
+        {chat.kind === 'loan' && onOpenDocuments && (
+          <button
+            type="button"
+            onClick={() => onOpenDocuments(chat.loan)}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+          >
+            <FileText className="h-3.5 w-3.5" />
+            Documents
           </button>
         )}
         {chat.kind === 'group' && (
@@ -501,12 +713,38 @@ function ChatThread({ chat, thread, me, isStaff, onBack, onLoadOlder, onSent, on
                 message={message}
                 mine={message.sender?.id === me.id}
                 showSender={showSender}
+                isStaff={isStaff}
+                onUploadForRequest={uploadForRequest}
+                onOpenDocuments={onOpenDocuments && (() => onOpenDocuments(chat.loan))}
+                onError={setError}
               />
             ))}
           </ul>
         )}
         <div ref={bottomRef} />
       </div>
+
+      {requesting && (
+        <div className="max-h-[60%] overflow-y-auto border-t border-slate-100 px-5 py-4">
+          {documentTypes ? (
+            <RequestForm
+              loanId={chat.loan}
+              types={documentTypes}
+              showChatNote={false}
+              submit={(payload) => chatApi.requestDocumentInChat(chat.id, payload)}
+              onCancel={() => setRequesting(false)}
+              onCreated={(message) => {
+                setRequesting(false)
+                onSent(chat.id, message)
+              }}
+            />
+          ) : (
+            <div className="flex justify-center py-4 text-slate-400">
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </div>
+          )}
+        </div>
+      )}
 
       <form
         onSubmit={(e) => {
@@ -516,7 +754,52 @@ function ChatThread({ chat, thread, me, isStaff, onBack, onLoadOlder, onSent, on
         className="border-t border-slate-100 px-5 py-4"
       >
         {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
+        {file && (
+          <div className="mb-2 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-200">
+            <Paperclip className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+            <span className="min-w-0 flex-1 truncate font-medium">{file.name}</span>
+            <span className="shrink-0 text-xs text-slate-400">{formatFileSize(file.size)}</span>
+            <button
+              type="button"
+              onClick={() => setFile(null)}
+              aria-label="Remove file"
+              className="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
         <div className="flex items-end gap-2">
+          {isLoanChat && (
+            <>
+              <button
+                type="button"
+                onClick={() => fileInput.current?.click()}
+                disabled={sending}
+                aria-label="Attach a file"
+                title="Attach a file"
+                className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-50"
+              >
+                <Paperclip className="h-4 w-4" />
+              </button>
+              <HiddenFileInput inputRef={fileInput} onFile={setFile} />
+            </>
+          )}
+          {isLoanChat && isStaff && (
+            <button
+              type="button"
+              onClick={() => setRequesting((v) => !v)}
+              aria-label="Request a document"
+              title="Request a document"
+              className={`flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-lg border ${
+                requesting
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                  : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              <FilePlus2 className="h-4 w-4" />
+            </button>
+          )}
           <textarea
             id={`chat-draft-${chat.id}`}
             rows={1}
@@ -528,12 +811,12 @@ function ChatThread({ chat, thread, me, isStaff, onBack, onLoadOlder, onSent, on
                 send()
               }
             }}
-            placeholder="Type a message…"
+            placeholder={file ? 'Add a message (optional)…' : 'Type a message…'}
             className="max-h-32 min-h-[42px] flex-1 resize-y rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
           />
           <button
             type="submit"
-            disabled={sending || !draft.trim()}
+            disabled={sending || (!draft.trim() && !file)}
             aria-label="Send message"
             className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-lg bg-emerald-700 text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -551,7 +834,9 @@ function ChatThread({ chat, thread, me, isStaff, onBack, onLoadOlder, onSent, on
  * Staff see loan chats, groups and direct messages and can start new ones; borrowers see
  * the chats of their own loans. New messages arrive live over the chat websocket.
  */
-export default function ChatPanel({ initialChatId = null }) {
+// onOpenDocuments(loanId): where a loan chat's "Documents" goes (the borrower portal passes its
+// Documents page); staff get the loan's Documents tab
+export default function ChatPanel({ initialChatId = null, onOpenDocuments }) {
   const { user, isStaff } = useAuth()
   const [chats, setChats] = useState([])
   const [loadingChats, setLoadingChats] = useState(true)
@@ -562,8 +847,15 @@ export default function ChatPanel({ initialChatId = null }) {
   const [query, setQuery] = useState('')
   const [creating, setCreating] = useState(false)
   const [mobileThreadOpen, setMobileThreadOpen] = useState(Boolean(initialChatId))
-  // The loan whose details modal is open (staff, from a loan chat)
+  // The loan whose details modal is open, and on which tab (staff, from a loan chat)
   const [openLoanId, setOpenLoanId] = useState(null)
+  const [openLoanTab, setOpenLoanTab] = useState('details')
+  const openDocuments = isStaff
+    ? (loanId) => {
+        setOpenLoanTab('documents')
+        setOpenLoanId(loanId)
+      }
+    : onOpenDocuments
 
   const activeIdRef = useRef(activeId)
   const chatsRef = useRef(chats)
@@ -640,7 +932,15 @@ export default function ChatPanel({ initialChatId = null }) {
 
   const receiveMessage = useCallback((chatId, message) => {
     setThreads((prev) =>
-      prev[chatId] ? { ...prev, [chatId]: { ...prev[chatId], messages: appendMessages(prev[chatId].messages, [message]) } } : prev,
+      prev[chatId]
+        ? {
+            ...prev,
+            [chatId]: {
+              ...prev[chatId],
+              messages: updateRequestCards(appendMessages(prev[chatId].messages, [message]), message),
+            },
+          }
+        : prev,
     )
     setChats((prev) => {
       const chat = prev.find((c) => c.id === chatId)
@@ -838,7 +1138,11 @@ export default function ChatPanel({ initialChatId = null }) {
             onSent={receiveMessage}
             onChatChanged={(chat) => setChats((prev) => upsertChat(prev, chat))}
             onLeft={handleLeft}
-            onShowLoan={() => setOpenLoanId(activeChat.loan)}
+            onShowLoan={() => {
+              setOpenLoanTab('details')
+              setOpenLoanId(activeChat.loan)
+            }}
+            onOpenDocuments={openDocuments}
           />
         ) : (
           <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-slate-400">
@@ -847,7 +1151,14 @@ export default function ChatPanel({ initialChatId = null }) {
         )}
       </section>
 
-      {isStaff && openLoanId != null && <LoanModal loanId={openLoanId} onClose={() => setOpenLoanId(null)} />}
+      {isStaff && openLoanId != null && (
+        <LoanModal
+          key={`${openLoanId}-${openLoanTab}`}
+          loanId={openLoanId}
+          initialTab={openLoanTab}
+          onClose={() => setOpenLoanId(null)}
+        />
+      )}
     </div>
   )
 }

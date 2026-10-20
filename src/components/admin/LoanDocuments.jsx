@@ -316,7 +316,8 @@ function RequestCard({ loanId, request, onChanged, onError }) {
   )
 }
 
-function RequestForm({ loanId, types, onCancel, onCreated }) {
+// Also used by the chat, which passes `submit` to post the request there
+export function RequestForm({ loanId, types, onCancel, onCreated, submit, showChatNote = true }) {
   const [form, setForm] = useState({ document_type: '', name: '', description: '', kind: 'upload', due_date: '' })
   const [formFile, setFormFile] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -339,16 +340,17 @@ function RequestForm({ loanId, types, onCancel, onCreated }) {
     e.preventDefault()
     setSaving(true)
     setError('')
+    const payload = {
+      document_type: form.document_type ? Number(form.document_type) : null,
+      name: form.name.trim(),
+      description: form.description.trim(),
+      kind: form.kind,
+      due_date: form.due_date || null,
+      form_file: form.kind === 'fill_form' ? formFile : null,
+    }
     try {
-      await createDocumentRequest(loanId, {
-        document_type: form.document_type ? Number(form.document_type) : null,
-        name: form.name.trim(),
-        description: form.description.trim(),
-        kind: form.kind,
-        due_date: form.due_date || null,
-        form_file: form.kind === 'fill_form' ? formFile : null,
-      })
-      onCreated()
+      const result = submit ? await submit(payload) : await createDocumentRequest(loanId, payload)
+      onCreated(result)
     } catch (err) {
       setError(errorMessage(err))
     } finally {
@@ -434,7 +436,7 @@ function RequestForm({ loanId, types, onCancel, onCreated }) {
           )}
         </div>
       )}
-      <p className="text-xs text-slate-400">The request is also posted in the loan chat.</p>
+      {showChatNote && <p className="text-xs text-slate-400">The request is also posted in the loan chat.</p>}
 
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
