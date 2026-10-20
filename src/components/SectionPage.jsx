@@ -1,4 +1,4 @@
-import { ArrowLeft, Send, Construction, ChevronRight, User } from 'lucide-react'
+import { ArrowLeft, Construction, ChevronRight } from 'lucide-react'
 import { getSection } from '../common/constants/nav'
 import { loanStatusStyles } from '../common/constants/uiStyles'
 import DealHealthBadge from './DealHealthBadge'
@@ -10,6 +10,7 @@ import MarketToolsSection from './MarketToolsSection'
 import TeamSection from './TeamSection'
 import ResourceCenterSection from './ResourceCenterSection'
 import CalendarSection from './CalendarSection'
+import ChatPanel from './chat/ChatPanel'
 
 function SectionHeader({ label, subtitle, onBack }) {
   return (
@@ -160,74 +161,6 @@ function LoanSummarySection({ loanSummaries = [] }) {
   )
 }
 
-function MessagesSection({ assignedOfficer = null, messageThread = [] }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-      <div className="flex items-center gap-3">
-        {assignedOfficer?.avatar ? (
-          <img src={assignedOfficer.avatar} alt="" className="h-10 w-10 rounded-full object-cover" />
-        ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-            <User className="h-5 w-5" />
-          </div>
-        )}
-        <div>
-          <p className="text-sm font-semibold text-slate-900">{assignedOfficer?.name || '—'}</p>
-          <p className="text-xs text-slate-400">{assignedOfficer?.title || 'Loan officer'}</p>
-        </div>
-      </div>
-
-      <div className="mt-5 space-y-4">
-        {messageThread.length === 0 ? (
-          <p className="text-sm text-slate-500">No messages yet.</p>
-        ) : (
-          messageThread.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm sm:max-w-[70%] ${
-                  msg.from === 'user'
-                    ? 'bg-emerald-700 text-white'
-                    : 'bg-slate-100 text-slate-800'
-                }`}
-              >
-                <p>{msg.text}</p>
-                <p
-                  className={`mt-1 text-[11px] ${
-                    msg.from === 'user' ? 'text-emerald-100' : 'text-slate-400'
-                  }`}
-                >
-                  {msg.time}
-                </p>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      <form
-        className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-4"
-        onSubmit={(e) => e.preventDefault()}
-      >
-        <input
-          type="text"
-          placeholder="Type a message..."
-          className="flex-1 rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
-        />
-        <button
-          type="submit"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-700 text-white hover:bg-emerald-800"
-          aria-label="Send message"
-        >
-          <Send className="h-4 w-4" />
-        </button>
-      </form>
-    </div>
-  )
-}
-
 function ComingSoonSection({ label }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-20 text-center">
@@ -250,6 +183,7 @@ const sectionSubtitles = {
   tools: 'Small widgets investors actually use.',
   'my-team': 'Instead of generic support.',
   resources: 'Great marketing opportunity.',
+  messages: 'Chat with your loan team about each of your loans.',
 }
 
 export default function SectionPage({
@@ -286,7 +220,7 @@ export default function SectionPage({
       content = <LoanSummarySection loanSummaries={summaries} />
       break
     case 'messages':
-      content = <MessagesSection assignedOfficer={loanDetail?.assignedOfficer} />
+      content = <ChatPanel />
       break
     case 'calendar':
       content = <CalendarSection properties={loans} />

@@ -536,6 +536,59 @@ function LoanPanel({ loan, stages, mode, canReassign, onModeChange, onClose, onS
   )
 }
 
+// The loan panel for one loan by id, for pages outside this list (e.g. a loan's chat on Messages)
+export function LoanModal({ loanId, onClose }) {
+  const [loan, setLoan] = useState(null)
+  const [error, setError] = useState('')
+  const [mode, setMode] = useState('view')
+  const [stages, setStages] = useState([])
+  const { user } = useAuth()
+
+  useEffect(() => {
+    let cancelled = false
+    fetchLoan(loanId)
+      .then((data) => !cancelled && setLoan(data))
+      .catch((err) => !cancelled && setError(errorMessage(err)))
+    fetchLoanStages()
+      .then((data) => !cancelled && setStages(Array.isArray(data) ? data : []))
+      .catch(() => !cancelled && setStages([]))
+    return () => {
+      cancelled = true
+    }
+  }, [loanId])
+
+  if (!loan) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4" onClick={onClose}>
+        <div className="rounded-2xl bg-white px-6 py-5 text-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
+          {error ? (
+            <div className="flex items-center gap-3">
+              <span className="text-red-600">{error}</span>
+              <button type="button" onClick={onClose} className="font-semibold text-slate-600 hover:underline">
+                Close
+              </button>
+            </div>
+          ) : (
+            <span className="text-slate-500">Loading loan…</span>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <LoanPanel
+      loan={loan}
+      stages={stages}
+      mode={mode}
+      canReassign={user?.role === 'admin'}
+      onModeChange={setMode}
+      onClose={onClose}
+      onSaved={setLoan}
+    />
+  )
+}
+
 export default function LoansSection() {
   const [loans, setLoans] = useState([])
   const [count, setCount] = useState(0)
