@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
+import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../common/auth/AuthContext'
+import { navSections } from '../common/constants/nav'
 import { useLoanDetail, useMyLoans } from '../hooks/useLoans'
 import Sidebar from '../components/Sidebar'
 import Topbar from '../components/Topbar'
@@ -14,36 +16,52 @@ import RecentActivity from '../components/RecentActivity'
 import SectionPage from '../components/SectionPage'
 import { Plus } from 'lucide-react'
 
+// Sections the URL may name: the sidebar's, plus ones reached from inside other sections
+const knownSections = new Set([...navSections.map((s) => s.id), 'conditions', 'deal-timeline', 'my-team'])
+
 export default function Dashboard() {
   const { user } = useAuth()
   const welcomeName = user?.full_name?.trim()
   const { loans, loading: loansLoading, error: loansError } = useMyLoans()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [activeSection, setActiveSection] = useState('dashboard')
-  const [selectedProperty, setSelectedProperty] = useState(null)
+  // The section and the selected loan live in the URL (/documents?loan=12), so back/forward,
+  // refresh and shared links all work
+  const { section } = useParams()
+  const activeSection = section || 'dashboard'
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const loanParam = searchParams.get('loan')
+  // The loan in the URL, else the first one (also when the URL names a loan that isn't theirs)
+  const selectedProperty = loans.find((l) => String(l.id) === loanParam) || loans[0] || null
+  const selectedId = selectedProperty?.id
 
-  useEffect(() => {
-    if (!loans.length) {
-      setSelectedProperty(null)
-      return
-    }
-    setSelectedProperty((prev) => {
-      if (prev && loans.some((l) => l.id === prev.id)) {
-        return loans.find((l) => l.id === prev.id) || loans[0]
-      }
-      return loans[0]
-    })
-  }, [loans])
+  // Go to a section, keeping the selected loan (or switching to loanId)
+  const setActiveSection = useCallback(
+    (id, loanId = selectedId) => {
+      navigate({
+        pathname: id === 'dashboard' ? '/' : `/${id}`,
+        search: loanId != null ? `?loan=${loanId}` : '',
+      })
+    },
+    [navigate, selectedId],
+  )
+
+  // Switching loans within a section replaces the history entry rather than adding one
+  const setSelectedProperty = useCallback(
+    (property) => {
+      setSearchParams(property ? { loan: String(property.id) } : {}, { replace: true })
+    },
+    [setSearchParams],
+  )
 
   const { detail, loading: detailLoading } = useLoanDetail(selectedProperty)
 
-  const openLoanDashboard = (property) => {
-    setSelectedProperty(property)
-    setActiveSection('dashboard')
-  }
+  const openLoanDashboard = (property) => setActiveSection('dashboard', property.id)
 
   const hasLoans = loans.length > 0
+
+  if (section && !knownSections.has(section)) return <Navigate to="/" replace />
 
   return (
     <div className="flex min-h-screen bg-slate-50">

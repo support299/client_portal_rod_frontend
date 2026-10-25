@@ -25,8 +25,9 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
 
+          {/* The borrower portal: / is the dashboard, /<section> a section (e.g. /documents?loan=12) */}
           <Route
-            path="/"
+            path="/:section?"
             element={
               <ProtectedRoute borrowerOnly>
                 <Dashboard />

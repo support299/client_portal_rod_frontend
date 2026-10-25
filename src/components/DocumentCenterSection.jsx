@@ -10,7 +10,6 @@ import {
 } from '../api/documents'
 import { errorMessage } from '../utils/errors'
 import { formatDate } from '../utils/format'
-import PropertySelector from './PropertySelector'
 
 // Keyed by DocumentRequest.Status: [label, badge classes, icon]
 const requestStatus = {
@@ -266,6 +265,66 @@ function FileList({ files, emptyText, onError }) {
   )
 }
 
+const awaitingStatuses = ['requested', 'needs_revision', 'rejected']
+
+// One tab per loan, with how many documents each is waiting on
+function LoanTabs({ loans, selectedId, onChange, refreshKey }) {
+  const [waiting, setWaiting] = useState({})
+
+  useEffect(() => {
+    let cancelled = false
+    Promise.all(
+      loans.map((loan) =>
+        fetchDocumentRequests(loan.id)
+          .then((reqs) => [loan.id, (reqs ?? []).filter((r) => awaitingStatuses.includes(r.status)).length])
+          .catch(() => [loan.id, null]),
+      ),
+    ).then((counts) => !cancelled && setWaiting(Object.fromEntries(counts)))
+    return () => {
+      cancelled = true
+    }
+  }, [loans, refreshKey])
+
+  return (
+    <div role="tablist" aria-label="Loans" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+      {loans.map((loan) => {
+        const active = loan.id === selectedId
+        const count = waiting[loan.id]
+        return (
+          <button
+            key={loan.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(loan)}
+            className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2.5 text-left transition-colors ${
+              active
+                ? 'border-emerald-300 bg-emerald-50 ring-1 ring-emerald-200'
+                : 'border-slate-200 bg-white hover:bg-slate-50'
+            }`}
+          >
+            <span className="min-w-0">
+              <span className={`block max-w-[16rem] truncate text-sm font-semibold ${active ? 'text-emerald-800' : 'text-slate-900'}`}>
+                {loan.loanName || loan.address}
+              </span>
+              {loan.status && <span className="block text-xs text-slate-400">{loan.status}</span>}
+            </span>
+            {count > 0 && (
+              <span
+                className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800"
+                title={`${count} document${count === 1 ? '' : 's'} waiting on you`}
+              >
+                {count}
+              </span>
+            )}
+            {count === 0 && <CircleCheck className="h-4 w-4 text-emerald-500" aria-label="All caught up" />}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function DocumentCenterSection({ loans = [], selectedLoan = null, onChangeLoan, userId }) {
   const loanId = selectedLoan?.id
   const [requests, setRequests] = useState([])
@@ -323,8 +382,12 @@ export default function DocumentCenterSection({ loans = [], selectedLoan = null,
   return (
     <div className="space-y-6">
       {loans.length > 1 && (
-        <PropertySelector properties={loans} selected={selectedLoan} onChange={onChangeLoan} />
+        <LoanTabs loans={loans} selectedId={loanId} onChange={onChangeLoan} refreshKey={requests} />
       )}
+      <h2 className="text-lg font-semibold text-slate-900">
+        {selectedLoan.loanName || selectedLoan.address}
+        {selectedLoan.status && <span className="ml-2 text-sm font-normal text-slate-400">{selectedLoan.status}</span>}
+      </h2>
 
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">

@@ -77,7 +77,6 @@ export function useLoanDetail(loan) {
     const officer = loan.loanOfficer
     return {
       loan,
-      summary: loan,
       currentStatus: { label: loan.status },
       loanStages: buildLoanStages(loan.statusKey),
       assignedOfficer: officer

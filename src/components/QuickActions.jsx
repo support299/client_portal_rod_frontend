@@ -1,9 +1,8 @@
-import { Upload, MessageSquare, FileText, Download, CalendarClock } from 'lucide-react'
+import { Upload, MessageSquare, Download, CalendarClock } from 'lucide-react'
 
 const actions = [
   { label: 'Upload Documents', icon: Upload, section: 'documents' },
   { label: 'Message My Loan Officer', icon: MessageSquare, section: 'messages' },
-  { label: 'View Loan Terms', icon: FileText, section: 'loan-summary' },
   { label: 'Download Documents', icon: Download, section: 'documents' },
   { label: 'Schedule a Call', icon: CalendarClock, section: 'calendar' },
 ]

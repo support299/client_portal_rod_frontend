@@ -114,54 +114,6 @@ function DealTimelineSection({ dealTimeline = [] }) {
   )
 }
 
-function LoanSummarySection({ loanSummaries = [] }) {
-  if (loanSummaries.length === 0) {
-    return (
-      <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-        <p className="text-sm text-slate-500">Loan summaries will appear here when you have active loans.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-6">
-      {loanSummaries.map((loan) => {
-        const terms = [
-          { label: 'Loan Amount', value: loan.loanAmount },
-          { label: 'Interest Rate', value: loan.interestRate },
-          { label: 'LTV', value: loan.ltv },
-          { label: 'ARV', value: loan.arv },
-          { label: 'Loan Type', value: loan.loanType },
-          { label: 'Term', value: loan.term },
-          { label: 'Closing Date', value: loan.closingDate },
-          { label: 'Maturity Date', value: loan.maturityDate },
-          { label: 'Monthly Payment', value: loan.monthlyPayment },
-          { label: 'Construction Holdback', value: loan.constructionHoldback },
-        ]
-
-        return (
-          <div key={loan.id} className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-            <h2 className="text-base font-semibold text-slate-900">{loan.loanName}</h2>
-            <p className="text-sm text-slate-400">{loan.address}</p>
-
-            <dl className="mt-4 grid grid-cols-1 gap-x-8 sm:grid-cols-2">
-              {terms.map((term) => (
-                <div
-                  key={term.label}
-                  className="flex items-center justify-between gap-3 border-b border-slate-100 py-3"
-                >
-                  <dt className="text-sm text-slate-500">{term.label}</dt>
-                  <dd className="text-sm font-semibold text-slate-900">{term.value ?? '—'}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 function ComingSoonSection({ label }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-20 text-center">
@@ -180,7 +132,6 @@ const sectionSubtitles = {
   'draw-requests': 'Huge time saver.',
   conditions: 'Every lender asks for conditions.',
   documents: 'Instead of emailing PDFs back and forth.',
-  'loan-summary': 'Simple, investor-friendly overview.',
   tools: 'Small widgets investors actually use.',
   'my-team': 'Instead of generic support.',
   resources: 'Great marketing opportunity.',
@@ -202,7 +153,6 @@ export default function SectionPage({
   const label = section?.label ?? 'Section'
   const subtitle = sectionSubtitles[sectionId]
   const docs = loanDetail?.documents || { documentsNeeded: [], documentsSent: [] }
-  const summaries = loanDetail?.summary ? [loanDetail.summary] : []
 
   let content
   switch (sectionId) {
@@ -222,17 +172,13 @@ export default function SectionPage({
         />
       )
       break
-    case 'loan-summary':
-      content = <LoanSummarySection loanSummaries={summaries} />
-      break
     case 'messages':
       content = (
         <ChatPanel
-          onOpenDocuments={(loanId) => {
-            const loan = loans.find((l) => l.id === loanId)
-            if (loan) onChangeLoan?.(loan)
-            onNavigate?.('documents')
-          }}
+          onOpenDocuments={(loanId) =>
+            // Only switch to a loan the borrower has; otherwise keep the current one
+            onNavigate?.('documents', loans.some((l) => l.id === loanId) ? loanId : undefined)
+          }
         />
       )
       break
