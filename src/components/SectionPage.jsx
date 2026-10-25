@@ -189,7 +189,7 @@ export default function SectionPage({
       content = <ProfileSection />
       break
     case 'draw-requests':
-      content = <DrawRequestsSection properties={loans} />
+      content = <DrawRequestsSection loans={loans} selectedLoan={selectedLoan} onChangeLoan={onChangeLoan} />
       break
     case 'conditions':
       content = (

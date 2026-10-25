@@ -52,6 +52,18 @@ export const userRoleStyles = {
 
 export const drawRequestStages = ['Submitted', 'Inspection Ordered', 'Approved', 'Funds Sent']
 
+// Keyed by DrawRequest.Status: [label, badge classes, step in drawRequestStages (null: off the main path)]
+export const drawStatusStyles = {
+  submitted: ['Submitted', 'bg-slate-100 text-slate-600', 0],
+  needs_info: ['Needs Info', 'bg-amber-100 text-amber-800', null],
+  inspection_ordered: ['Inspection Ordered', 'bg-blue-100 text-blue-700', 1],
+  inspected: ['Inspected', 'bg-blue-100 text-blue-700', 1],
+  approved: ['Approved', 'bg-cyan-100 text-cyan-700', 2],
+  funded: ['Funded', 'bg-emerald-100 text-emerald-700', 4],
+  rejected: ['Rejected', 'bg-red-100 text-red-700', null],
+  cancelled: ['Cancelled', 'bg-slate-100 text-slate-400', null],
+}
+
 export const taskStatusStyles = {
   Open: 'bg-slate-100 text-slate-600',
   'In Progress': 'bg-blue-100 text-blue-700',

@@ -15,6 +15,7 @@ import { errorMessage } from '../../utils/errors'
 import { currency, formatDate } from '../../utils/format'
 import { DetailGroup, DetailRow } from './DetailList'
 import LoanDocuments from './LoanDocuments'
+import LoanDraws from './LoanDraws'
 
 const PAGE_SIZE = 25
 
@@ -64,6 +65,7 @@ function LoanDetails({ loan }) {
     <div className="space-y-6">
       <DetailGroup title="Loan">
         <DetailRow label="Amount">{formatAmount(loan.loan_amount)}</DetailRow>
+        <DetailRow label="Holdback">{formatAmount(loan.holdback_amount)}</DetailRow>
         <DetailRow label="Status">
           <StatusBadge loan={loan} />
         </DetailRow>
@@ -456,6 +458,7 @@ function EditLoanForm({ loan, stages, canReassign, onCancel, onSaved, onSavingCh
 const panelTabs = [
   { id: 'details', label: 'Details' },
   { id: 'documents', label: 'Documents' },
+  { id: 'draws', label: 'Draws' },
 ]
 
 function LoanPanel({ loan, stages, mode, canReassign, onModeChange, onClose, onSaved, initialTab = 'details' }) {
@@ -535,6 +538,8 @@ function LoanPanel({ loan, stages, mode, canReassign, onModeChange, onClose, onS
         <div className="flex-1 overflow-y-auto p-5 sm:p-6">
           {mode === 'view' && tab === 'documents' ? (
             <LoanDocuments loanId={loan.id} />
+          ) : mode === 'view' && tab === 'draws' ? (
+            <LoanDraws loanId={loan.id} />
           ) : mode === 'edit' ? (
             <EditLoanForm
               loan={loan}
