@@ -562,7 +562,7 @@ function LoanPanel({ loan, stages, mode, canReassign, onModeChange, onClose, onS
 }
 
 // The loan panel for one loan by id, for pages outside this list (e.g. a loan's chat on Messages);
-// initialTab: 'details' or 'documents'
+// initialTab: 'details', 'documents' or 'draws'
 export function LoanModal({ loanId, onClose, initialTab }) {
   const [loan, setLoan] = useState(null)
   const [error, setError] = useState('')
