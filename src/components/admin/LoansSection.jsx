@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Mail, Pencil, Phone, Search, X } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { ExternalLink, Mail, Pencil, Phone, Search, X } from 'lucide-react'
 import {
   fetchLoan,
   fetchLoanStages,
@@ -28,7 +28,7 @@ function formatAmount(value) {
   return amount ? currency.format(amount) : null
 }
 
-function StatusBadge({ loan }) {
+export function StatusBadge({ loan }) {
   return (
     <span className="whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
       {loan.status_label || loan.stage_name || loan.status}
@@ -146,7 +146,7 @@ function formFromLoan(loan) {
 }
 
 // Fields the GHL opportunity update accepts (the pipeline itself can't be changed here)
-function EditLoanForm({ loan, stages, canReassign, onCancel, onSaved, onSavingChange }) {
+export function EditLoanForm({ loan, stages, canReassign, onCancel, onSaved, onSavingChange }) {
   const [original] = useState(() => formFromLoan(loan))
   const [form, setForm] = useState(original)
   const [statuses, setStatuses] = useState([])
@@ -493,6 +493,14 @@ function LoanPanel({ loan, stages, mode, canReassign, onModeChange, onClose, onS
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1">
+            <Link
+              to={`/admin/loans/${loan.id}${tab === 'details' ? '' : `#${tab}`}`}
+              onClick={() => !saving && onClose()}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Full page
+            </Link>
             {mode === 'view' && tab === 'details' && (
               <button
                 type="button"
@@ -632,12 +640,18 @@ export default function LoansSection() {
   const [panelMode, setPanelMode] = useState('view')
   const [stages, setStages] = useState([])
   const { user } = useAuth()
+  const navigate = useNavigate()
   const canReassign = user?.role === 'admin'
 
   const pageCount = Math.max(1, Math.ceil(count / PAGE_SIZE))
   const selectedLoan = loans.find((l) => l.id === selectedId)
 
+  // Rows open the loan's page; the pencil edits in the quick panel
   function openLoan(loan, mode = 'view') {
+    if (mode === 'view') {
+      navigate(`/admin/loans/${loan.id}`)
+      return
+    }
     setSelectedId(loan.id)
     setPanelMode(mode)
   }

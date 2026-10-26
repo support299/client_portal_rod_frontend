@@ -8,7 +8,7 @@ import AdminOverview from './components/admin/AdminOverview'
 import PipelineSection from './components/admin/PipelineSection'
 import LoansSection from './components/admin/LoansSection'
 import TasksSection from './components/admin/TasksSection'
-import LoanDetailSection from './components/admin/LoanDetailSection'
+import LoanPage from './components/admin/LoanPage'
 import DocumentsSection from './components/admin/DocumentsSection'
 import DocumentTypesSection from './components/admin/DocumentTypesSection'
 import MilestonesSection from './components/admin/MilestonesSection'
@@ -47,7 +47,7 @@ function App() {
             <Route path="pipeline" element={<PipelineSection />} />
             <Route path="loans" element={<LoansSection />} />
             <Route path="tasks" element={<TasksSection />} />
-            <Route path="loans/:loanNumber" element={<LoanDetailSection />} />
+            <Route path="loans/:loanId" element={<LoanPage />} />
             <Route path="documents" element={<DocumentsSection />} />
             <Route path="document-types" element={<DocumentTypesSection />} />
             <Route path="milestones" element={<MilestonesSection />} />

@@ -8,18 +8,17 @@ import { useAuth } from '../common/auth/AuthContext'
 import { useChatSocket } from '../hooks/useChatSocket'
 import { errorMessage } from '../utils/errors'
 import { formatDate } from '../utils/format'
-import { LoanModal } from './admin/LoansSection'
 
 const PAGE_SIZE = 20
 
-// Keyed by Notification.Kind: [icon, icon classes, borrower portal section, staff loan panel tab]
+// Keyed by Notification.Kind: [icon, icon classes, borrower portal section, section of the staff loan page]
 const kinds = {
   draw_submitted: [Banknote, 'bg-emerald-100 text-emerald-700', 'draw-requests', 'draws'],
   draw_status: [Banknote, 'bg-emerald-100 text-emerald-700', 'draw-requests', 'draws'],
   document_requested: [FileText, 'bg-amber-100 text-amber-800', 'documents', 'documents'],
   document_uploaded: [FileText, 'bg-blue-100 text-blue-700', 'documents', 'documents'],
   document_reviewed: [FileText, 'bg-blue-100 text-blue-700', 'documents', 'documents'],
-  loan_assigned: [UserPlus, 'bg-indigo-100 text-indigo-700', 'dashboard', 'details'],
+  loan_assigned: [UserPlus, 'bg-indigo-100 text-indigo-700', 'dashboard', 'overview'],
 }
 
 function timeAgo(value) {
@@ -62,7 +61,7 @@ function NotificationItem({ notification, onOpen }) {
 
 /**
  * The bell in the top bar: unread badge, the latest notifications, live updates over the shared
- * socket. Borrowers go to the matching portal section; staff get the loan panel on the right tab.
+ * socket. Borrowers go to the matching portal section; staff to that section of the loan's page.
  */
 export default function NotificationBell() {
   const { user } = useAuth()
@@ -75,7 +74,6 @@ export default function NotificationBell() {
   const [loaded, setLoaded] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [loanPanel, setLoanPanel] = useState(null)
   const ref = useRef(null)
 
   const refreshCount = useCallback(() => {
@@ -146,7 +144,7 @@ export default function NotificationBell() {
       const path = !section || section === 'dashboard' ? '/' : `/${section}`
       navigate({ pathname: path, search: `?loan=${notification.loan}` })
     } else {
-      setLoanPanel({ loanId: notification.loan, tab: tab ?? 'details' })
+      navigate({ pathname: `/admin/loans/${notification.loan}`, hash: tab ?? 'overview' })
     }
   }
 
@@ -218,15 +216,6 @@ export default function NotificationBell() {
             )}
           </div>
         </div>
-      )}
-
-      {loanPanel && (
-        <LoanModal
-          key={`${loanPanel.loanId}-${loanPanel.tab}`}
-          loanId={loanPanel.loanId}
-          initialTab={loanPanel.tab}
-          onClose={() => setLoanPanel(null)}
-        />
       )}
     </div>
   )
