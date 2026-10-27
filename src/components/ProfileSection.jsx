@@ -1,17 +1,8 @@
 import { useState } from 'react'
-import {
-  Building2,
-  Users,
-  ShieldCheck,
-  MapPin,
-  Bell,
-  Eye,
-  EyeOff,
-  Pencil,
-  CreditCard,
-  BadgeCheck,
-} from 'lucide-react'
+import { Bell, User } from 'lucide-react'
+import { useAuth } from '../common/auth/AuthContext'
 
+// Local only for now: not saved, resets on reload
 const communicationPreferenceTemplate = [
   { id: 1, label: 'Email Notifications', description: 'Loan updates, document requests, and messages', enabled: true },
   { id: 2, label: 'SMS Alerts', description: 'Time-sensitive deadlines and draw approvals', enabled: true },
@@ -19,26 +10,14 @@ const communicationPreferenceTemplate = [
   { id: 4, label: 'Marketing & Promotions', description: 'New products, rate changes, referral offers', enabled: false },
 ]
 
-function Card({ icon: Icon, title, children, onEdit }) {
+function Card({ icon: Icon, title, children }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-            <Icon className="h-4 w-4" />
-          </div>
-          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+      <div className="flex items-center gap-2.5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+          <Icon className="h-4 w-4" />
         </div>
-        {onEdit && (
-          <button
-            type="button"
-            onClick={onEdit}
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 hover:text-emerald-700"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-            Edit
-          </button>
-        )}
+        <h2 className="text-base font-semibold text-slate-900">{title}</h2>
       </div>
       <div className="mt-4">{children}</div>
     </div>
@@ -49,172 +28,22 @@ function FieldRow({ label, value }) {
   return (
     <div className="flex items-center justify-between gap-3 py-2.5">
       <dt className="text-sm text-slate-500">{label}</dt>
-      <dd className="text-sm font-semibold text-slate-900">{value || '—'}</dd>
+      <dd className="break-all text-right text-sm font-semibold text-slate-900">{value || '—'}</dd>
     </div>
   )
 }
 
-function BusinessInfoCard({ businessInfo = {} }) {
+function BasicDetailsCard() {
+  const { user } = useAuth()
+  const name = user?.full_name?.trim() || [user?.first_name, user?.last_name].filter(Boolean).join(' ')
+
   return (
-    <Card icon={Building2} title="Business Information" onEdit={() => {}}>
+    <Card icon={User} title="Basic Details">
       <dl className="divide-y divide-slate-100">
-        <FieldRow label="Business Name" value={businessInfo.name} />
-        <FieldRow label="Entity Type" value={businessInfo.entityType} />
-        <FieldRow label="Years in Business" value={businessInfo.yearsInBusiness} />
-        <FieldRow label="Website" value={businessInfo.website} />
+        <FieldRow label="Name" value={name} />
+        <FieldRow label="Email" value={user?.email} />
+        <FieldRow label="Phone" value={user?.phone} />
       </dl>
-    </Card>
-  )
-}
-
-function LlcInfoCard({ llcInfo = {} }) {
-  return (
-    <Card icon={BadgeCheck} title="LLC Information" onEdit={() => {}}>
-      <dl className="divide-y divide-slate-100">
-        <FieldRow label="LLC Name" value={llcInfo.name} />
-        <FieldRow label="State of Formation" value={llcInfo.stateOfFormation} />
-        <FieldRow label="Formation Date" value={llcInfo.formationDate} />
-        <FieldRow label="Registered Agent" value={llcInfo.registeredAgent} />
-      </dl>
-    </Card>
-  )
-}
-
-function TaxIdCard({ taxId = {} }) {
-  const [revealed, setRevealed] = useState(false)
-  const ein = taxId.ein ?? ''
-  const masked = ein.length >= 4 ? `**-***${ein.slice(-4)}` : '—'
-
-  return (
-    <Card icon={ShieldCheck} title="Tax ID (EIN)">
-      <div className="flex items-center justify-between gap-3">
-        <p className="font-mono text-sm font-semibold text-slate-900">
-          {revealed && ein ? ein : masked}
-        </p>
-        {ein && (
-          <button
-            type="button"
-            onClick={() => setRevealed((r) => !r)}
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 hover:text-emerald-700"
-          >
-            {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-            {revealed ? 'Hide' : 'Reveal'}
-          </button>
-        )}
-      </div>
-    </Card>
-  )
-}
-
-function BankAccountsCard({ bankAccounts = [] }) {
-  return (
-    <Card icon={CreditCard} title="Bank Accounts">
-      {bankAccounts.length === 0 ? (
-        <p className="text-sm text-slate-500">No bank accounts on file.</p>
-      ) : (
-        <ul className="divide-y divide-slate-100">
-          {bankAccounts.map((account) => (
-            <li key={account.id} className="flex items-center justify-between gap-3 py-3">
-              <div>
-                <p className="text-sm font-semibold text-slate-900">{account.bankName}</p>
-                <p className="text-xs text-slate-400">
-                  {account.accountType} &middot; &bull;&bull;&bull;&bull; {account.last4}
-                </p>
-              </div>
-              {account.primary && (
-                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                  Primary
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
-  )
-}
-
-function AuthorizedSignersCard({ authorizedSigners = [] }) {
-  return (
-    <Card icon={Users} title="Authorized Signers">
-      {authorizedSigners.length === 0 ? (
-        <p className="text-sm text-slate-500">No authorized signers on file.</p>
-      ) : (
-        <ul className="divide-y divide-slate-100">
-          {authorizedSigners.map((signer) => (
-            <li key={signer.id} className="py-3">
-              <p className="text-sm font-semibold text-slate-900">
-                {signer.name}{' '}
-                {signer.title && (
-                  <span className="font-normal text-slate-400">&middot; {signer.title}</span>
-                )}
-              </p>
-              {signer.email && <p className="mt-0.5 text-sm text-slate-500">{signer.email}</p>}
-              {signer.phone && <p className="text-sm text-slate-500">{signer.phone}</p>}
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
-  )
-}
-
-function InsuranceCertificatesCard({ insuranceCertificates = [] }) {
-  return (
-    <Card icon={ShieldCheck} title="Insurance Certificates">
-      {insuranceCertificates.length === 0 ? (
-        <p className="text-sm text-slate-500">No insurance certificates on file.</p>
-      ) : (
-        <ul className="divide-y divide-slate-100">
-          {insuranceCertificates.map((cert) => (
-            <li key={cert.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-              <div>
-                <p className="text-sm font-semibold text-slate-900">
-                  {cert.provider}{' '}
-                  {cert.coverageType && (
-                    <span className="font-normal text-slate-400">&middot; {cert.coverageType}</span>
-                  )}
-                </p>
-                <p className="text-xs text-slate-400">
-                  {cert.policyNumber}
-                  {cert.expiration && <> &middot; Expires {cert.expiration}</>}
-                </p>
-              </div>
-              {cert.status && (
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                    cert.status === 'Active'
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-amber-100 text-amber-800'
-                  }`}
-                >
-                  {cert.status}
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
-  )
-}
-
-function MailingAddressCard({ mailingAddress = {} }) {
-  const hasAddress =
-    mailingAddress.line1 || mailingAddress.city || mailingAddress.state || mailingAddress.zip
-
-  return (
-    <Card icon={MapPin} title="Mailing Address" onEdit={() => {}}>
-      {hasAddress ? (
-        <p className="text-sm text-slate-700">
-          {mailingAddress.line1}
-          {mailingAddress.line2 && <>, {mailingAddress.line2}</>}
-          <br />
-          {[mailingAddress.city, mailingAddress.state, mailingAddress.zip].filter(Boolean).join(', ')}
-        </p>
-      ) : (
-        <p className="text-sm text-slate-500">No mailing address on file.</p>
-      )}
     </Card>
   )
 }
@@ -239,6 +68,7 @@ function CommunicationPreferencesCard() {
               type="button"
               role="switch"
               aria-checked={pref.enabled}
+              aria-label={pref.label}
               onClick={() => toggle(pref.id)}
               className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
                 pref.enabled ? 'bg-emerald-600' : 'bg-slate-200'
@@ -260,13 +90,7 @@ function CommunicationPreferencesCard() {
 export default function ProfileSection() {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      <BusinessInfoCard />
-      <LlcInfoCard />
-      <TaxIdCard />
-      <BankAccountsCard />
-      <AuthorizedSignersCard />
-      <InsuranceCertificatesCard />
-      <MailingAddressCard />
+      <BasicDetailsCard />
       <CommunicationPreferencesCard />
     </div>
   )

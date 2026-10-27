@@ -10,6 +10,7 @@ import { formatDate } from '../../utils/format'
 import { DetailGroup, DetailRow } from './DetailList'
 import LoanDocuments from './LoanDocuments'
 import LoanDraws from './LoanDraws'
+import LoanNotes from './LoanNotes'
 import { EditLoanForm, StatusBadge } from './LoansSection'
 
 // In-page sections, in order; /admin/loans/12#draws scrolls to one
@@ -18,6 +19,7 @@ const sections = [
   { id: 'draws', label: 'Draws' },
   { id: 'documents', label: 'Documents' },
   { id: 'contacts', label: 'Contacts' },
+  { id: 'notes', label: 'Notes' },
 ]
 
 const card = 'rounded-xl border border-slate-200 bg-white p-5 sm:p-6'
@@ -270,6 +272,10 @@ export default function LoanPage() {
               ))}
               {officers.length === 0 && <p className="py-3 text-sm text-slate-400">No one on the loan team yet.</p>}
             </div>
+          </Section>
+
+          <Section id="notes" title="Internal Notes">
+            <LoanNotes loanId={loan.id} />
           </Section>
 
           <section className={card}>

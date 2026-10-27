@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { ShieldCheck, ArrowLeftRight, X } from 'lucide-react'
+import { ShieldCheck, X } from 'lucide-react'
 import { adminNavSections } from '../../common/constants/adminNav'
 
 function AdminSidebarContent({ onNavigate }) {
@@ -38,16 +38,6 @@ function AdminSidebarContent({ onNavigate }) {
           ))}
         </ul>
       </nav>
-
-      <div className="p-4">
-        <NavLink
-          to="/"
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
-        >
-          <ArrowLeftRight className="h-4 w-4" />
-          Switch to Client View
-        </NavLink>
-      </div>
     </div>
   )
 }
