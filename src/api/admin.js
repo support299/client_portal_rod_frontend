@@ -5,12 +5,12 @@ export async function fetchAllLoans() {
 }
 
 export async function fetchOpportunityFilters() {
-  return apiRequest('/crm/opportunities/filters/')
+  return apiRequest('/api/crm/opportunities/filters/')
 }
 
 export async function fetchOpportunities(params = {}) {
   const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== '' && v != null))
-  return apiRequest(`/crm/opportunities/?${query}`)
+  return apiRequest(`/api/crm/opportunities/?${query}`)
 }
 
 export async function fetchLoans(params = {}) {
@@ -57,7 +57,7 @@ export async function updateLoan(id, payload) {
 }
 
 export async function updateOpportunity(opportunityId, payload) {
-  return apiRequest(`/crm/opportunities/${encodeURIComponent(opportunityId)}/`, {
+  return apiRequest(`/api/crm/opportunities/${encodeURIComponent(opportunityId)}/`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   })

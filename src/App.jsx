@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './common/auth/AuthContext'
 import ProtectedRoute from './common/auth/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
+import SetPasswordPage from './pages/SetPasswordPage'
 import Dashboard from './pages/Dashboard'
 import AdminLayout from './pages/AdminLayout'
 import AdminOverview from './components/admin/AdminOverview'
@@ -24,6 +25,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/set-password" element={<SetPasswordPage />} />
 
           {/* The borrower portal: / is the dashboard, /<section> a section (e.g. /documents?loan=12) */}
           <Route

@@ -255,8 +255,8 @@ export default function UsersSection() {
       role: form.role,
       is_active: form.is_active,
     }
-    // Password is required on create and only sent on edit when changed
-    if (form.password) payload.password = form.password
+    // New users set their password from an emailed link; on edit it's only sent when changed
+    if (isEditing && form.password) payload.password = form.password
 
     setSaving(true)
     setFormError('')
@@ -501,22 +501,24 @@ export default function UsersSection() {
                   ))}
                 </select>
               </div>
-              <div>
-                <label htmlFor="password" className="text-xs font-medium text-slate-500">
-                  {isEditing ? 'New Password' : 'Password'}
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  required={!isEditing}
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder={isEditing ? 'Leave blank to keep current password' : ''}
-                  className={inputClass}
-                />
-              </div>
+              {/* New users set their own password from the emailed link on first sign-in */}
+              {isEditing && (
+                <div>
+                  <label htmlFor="password" className="text-xs font-medium text-slate-500">
+                    New Password
+                  </label>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={form.password}
+                    onChange={handleChange}
+                    placeholder="Leave blank to keep current password"
+                    className={inputClass}
+                  />
+                </div>
+              )}
               {isEditing && (
                 <label className="flex items-center gap-2 text-sm text-slate-600">
                   <input
