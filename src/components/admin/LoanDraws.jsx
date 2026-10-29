@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ChevronDown, ChevronRight, MoreHorizontal, Pencil, Plus } from 'lucide-react'
 import { updateLoan } from '../../api/admin'
 import { uploadLoanDocument } from '../../api/documents'
 import { changeDrawStatus, createDraw, deleteDraw, fetchDrawSummary, fetchDraws, updateDraw } from '../../api/draws'
@@ -7,7 +7,7 @@ import { useAuth } from '../../common/auth/AuthContext'
 import { drawStatusLabel, money } from '../../utils/draws'
 import { errorMessage } from '../../utils/errors'
 import { formatDate } from '../../utils/format'
-import { DrawFiles, DrawHistory, DrawStatusBadge, DrawSummaryBar, FilesButton } from '../DrawShared'
+import { DrawFiles, DrawHistory, DrawStatusBadge, FilesButton } from '../DrawShared'
 
 const inputClass =
   'mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none'
@@ -16,8 +16,38 @@ const smallButton =
 const primaryButton =
   'inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60'
 
+const iconButton =
+  'inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:bg-white disabled:opacity-50'
+
 // Statuses that keep the staff note on the draw for the borrower to see
 const noteForBorrower = ['needs_info', 'rejected']
+
+// The usual forward move from each status, offered as the row's main button (see DrawService.STAFF_TRANSITIONS)
+const nextStep = {
+  submitted: ['inspection_ordered', 'Order inspection'],
+  inspection_ordered: ['inspected', 'Mark inspected'],
+  inspected: ['approved', 'Approve'],
+  approved: ['funded', 'Mark funded'],
+}
+// Draws waiting on staff are flagged; final ones fold into "Completed draws"
+const staffActionStatuses = Object.keys(nextStep)
+const closedStatuses = ['funded', 'rejected', 'cancelled']
+
+const drawFilters = [
+  { id: 'all', label: 'All', match: () => true },
+  { id: 'action', label: 'Needs your action', match: (d) => staffActionStatuses.includes(d.status) },
+  { id: 'waiting', label: 'Waiting on borrower', match: (d) => d.status === 'needs_info' },
+]
+
+// Progress steps shown in an expanded draw; rejected and cancelled draws are off the track
+const trackerSteps = [
+  ['Submitted', ['submitted', 'needs_info']],
+  ['Inspection', ['inspection_ordered', 'inspected']],
+  ['Approved', ['approved']],
+  ['Funded', ['funded']],
+]
+
+const pct = (part, whole) => (whole > 0 ? Math.min(100, (part / whole) * 100) : 0)
 
 function HoldbackForm({ loanId, summary, onSaved }) {
   const [editing, setEditing] = useState(false)
@@ -41,6 +71,7 @@ function HoldbackForm({ loanId, summary, onSaved }) {
   }
 
   if (!editing) {
+    const hasHoldback = summary?.holdback != null
     return (
       <button
         type="button"
@@ -48,16 +79,18 @@ function HoldbackForm({ loanId, summary, onSaved }) {
           setValue(summary?.holdback ?? '')
           setEditing(true)
         }}
-        className={smallButton}
+        className={hasHoldback ? 'rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700' : smallButton}
+        title={hasHoldback ? 'Edit holdback' : undefined}
+        aria-label={hasHoldback ? 'Edit holdback' : undefined}
       >
         <Pencil className="h-3.5 w-3.5" />
-        {summary?.holdback == null ? 'Set holdback' : 'Edit holdback'}
+        {!hasHoldback && 'Set holdback'}
       </button>
     )
   }
 
   return (
-    <form onSubmit={save} className="flex flex-wrap items-end gap-2">
+    <form onSubmit={save} className="flex basis-full flex-wrap items-end gap-2">
       <div>
         <label htmlFor="holdback-amount" className="text-xs font-medium text-slate-500">Holdback ($)</label>
         <input
@@ -134,8 +167,8 @@ function NewDrawForm({ loanId, available, onCancel, onCreated }) {
 }
 
 // Move a draw to one of its allowed statuses, with a reason; approving needs the approved amount
-function StatusForm({ loanId, draw, onDone }) {
-  const [status, setStatus] = useState(draw.allowed_statuses[0])
+function StatusForm({ loanId, draw, initialStatus, onDone }) {
+  const [status, setStatus] = useState(initialStatus ?? draw.allowed_statuses[0])
   const [note, setNote] = useState('')
   const [amountApproved, setAmountApproved] = useState(draw.amount_approved ?? draw.amount_requested)
   const [fundingReference, setFundingReference] = useState(draw.funding_reference)
@@ -306,9 +339,82 @@ function DetailsForm({ loanId, draw, onDone }) {
   )
 }
 
-function DrawCard({ loanId, draw, isAdmin, onChanged, onError }) {
+// Where the draw is on Submitted → Inspection → Approved → Funded
+function DrawTracker({ status }) {
+  const at = trackerSteps.findIndex(([, statuses]) => statuses.includes(status))
+  if (at < 0) return null
+  return (
+    <ol className="flex flex-wrap items-center gap-1 text-[11px]" aria-label="Draw progress">
+      {trackerSteps.map(([label], i) => (
+        <li key={label} className="flex items-center gap-1">
+          {i > 0 && <span className={`h-px w-5 ${i <= at ? 'bg-emerald-500' : 'bg-slate-200'}`} />}
+          <span className={`h-2 w-2 rounded-full ${i <= at ? 'bg-emerald-600' : 'bg-slate-300'}`} />
+          <span className={i <= at ? 'font-semibold text-emerald-700' : 'text-slate-400'}>{label}</span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+// ⋯ button with a dropdown of actions; closes on outside click or Escape
+function RowMenu({ label, items }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e) => !ref.current?.contains(e.target) && setOpen(false)
+    const onKey = (e) => e.key === 'Escape' && setOpen(false)
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className={iconButton}
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+      {open && (
+        <div role="menu" className="absolute right-0 z-10 mt-1 w-52 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+          {items.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              role="menuitem"
+              disabled={item.disabled}
+              onClick={() => {
+                setOpen(false)
+                item.onSelect()
+              }}
+              className={`block w-full px-3 py-1.5 text-left text-sm hover:bg-slate-50 disabled:opacity-50 ${
+                item.danger ? 'text-red-600' : 'text-slate-700'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// One line per draw with its next step; details, files, forms and history show when expanded
+function DrawRow({ loanId, draw, isAdmin, expanded, onExpandedChange, onChanged, onError }) {
   // null, 'status' or 'details'
   const [panel, setPanel] = useState(null)
+  const [moveTo, setMoveTo] = useState(null)
   const [busy, setBusy] = useState(false)
 
   async function addFiles(files) {
@@ -343,81 +449,146 @@ function DrawCard({ loanId, draw, isAdmin, onChanged, onError }) {
     await onChanged()
   }
 
+  const openPanel = (name, status = null) => {
+    setMoveTo(status)
+    setPanel(name)
+    onExpandedChange(true)
+  }
+
+  const next = nextStep[draw.status]
+  const canNext = next && draw.allowed_statuses.includes(next[0])
+  const fileCount = draw.files?.length ?? 0
+  const Chevron = expanded ? ChevronDown : ChevronRight
+
+  const menuItems = [
+    ...draw.allowed_statuses
+      .filter((s) => !canNext || s !== next[0])
+      .map((s) => ({
+        label: draw.status === 'approved' && s === 'inspected' ? 'Undo approval' : `Move to ${drawStatusLabel(s)}`,
+        onSelect: () => openPanel('status', s),
+      })),
+    { label: 'Edit details', onSelect: () => openPanel('details') },
+    ...(isAdmin ? [{ label: 'Delete draw', danger: true, disabled: busy, onSelect: remove }] : []),
+  ]
+
   const facts = [
-    ['Requested', money(draw.amount_requested)],
     ['Approved', money(draw.amount_approved)],
-    ['Submitted', [formatDate(draw.submitted_at), draw.submitted_by?.full_name?.trim()].filter(Boolean).join(' · ')],
     ['Inspection', [formatDate(draw.inspection_date), draw.inspector].filter(Boolean).join(' · ') || '—'],
     ['Funding ref.', draw.funding_reference || '—'],
   ]
 
   return (
-    <li className="space-y-3 rounded-xl border border-slate-200 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-slate-900">Draw #{draw.number}</p>
-        <DrawStatusBadge status={draw.status} />
+    <li
+      className={`border-l-4 ${staffActionStatuses.includes(draw.status) ? 'border-l-amber-400' : 'border-l-transparent'} ${
+        expanded ? 'bg-slate-50/60' : ''
+      }`}
+    >
+      <div className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50">
+        <button
+          type="button"
+          onClick={() => onExpandedChange(!expanded)}
+          aria-expanded={expanded}
+          className="flex min-w-0 flex-1 items-start gap-2 text-left"
+        >
+          <Chevron className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+          <span className="min-w-0">
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium text-slate-900">Draw #{draw.number}</span>
+              <DrawStatusBadge status={draw.status} />
+              {fileCount > 0 && (
+                <span className="text-xs text-slate-400">
+                  {fileCount} file{fileCount === 1 ? '' : 's'}
+                </span>
+              )}
+            </span>
+            <span className="mt-0.5 block truncate text-xs text-slate-400">
+              {[formatDate(draw.submitted_at), draw.submitted_by?.full_name?.trim()].filter(Boolean).join(' · ')}
+            </span>
+          </span>
+        </button>
+        <span className="w-24 shrink-0 text-right text-sm font-semibold tabular-nums text-slate-900">
+          {money(draw.amount_requested)}
+        </span>
+        <span className="hidden w-24 shrink-0 text-right text-sm tabular-nums text-slate-500 sm:block">
+          {money(draw.amount_approved)}
+        </span>
+        <div className="flex w-36 shrink-0 items-center justify-end gap-1">
+          {canNext && (
+            <button
+              type="button"
+              onClick={() => openPanel('status', next[0])}
+              className="whitespace-nowrap rounded-md bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+            >
+              {next[1]}
+            </button>
+          )}
+          <RowMenu label={`Actions for Draw #${draw.number}`} items={menuItems} />
+        </div>
       </div>
 
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-5">
-        {facts.map(([label, value]) => (
-          <div key={label} className="min-w-0">
-            <dt className="text-slate-400">{label}</dt>
-            <dd className="truncate font-medium tabular-nums text-slate-800">{value}</dd>
-          </div>
-        ))}
-      </dl>
+      {expanded && (
+        <div className="space-y-3 px-3 pb-4 pl-9">
+          <DrawTracker status={draw.status} />
 
-      {draw.borrower_comment && (
-        <p className="text-sm text-slate-600"><span className="font-medium text-slate-500">Borrower:</span> {draw.borrower_comment}</p>
-      )}
-      {draw.staff_note && (
-        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          <span className="font-semibold">Note to borrower:</span> {draw.staff_note}
-        </p>
-      )}
+          <dl className="grid grid-cols-3 gap-x-4 gap-y-2 text-xs">
+            {facts.map(([label, value]) => (
+              <div key={label} className="min-w-0">
+                <dt className="text-slate-400">{label}</dt>
+                <dd className="truncate font-medium tabular-nums text-slate-800">{value}</dd>
+              </div>
+            ))}
+          </dl>
 
-      <DrawFiles files={draw.files} onError={onError} />
-
-      {panel === 'status' && <StatusForm loanId={loanId} draw={draw} onDone={done} />}
-      {panel === 'details' && <DetailsForm loanId={loanId} draw={draw} onDone={done} />}
-
-      {panel == null && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {draw.allowed_statuses.length > 0 && (
-            <button type="button" onClick={() => setPanel('status')} className={primaryButton}>
-              Change status
-            </button>
+          {draw.borrower_comment && (
+            <p className="text-sm text-slate-600"><span className="font-medium text-slate-500">Borrower:</span> {draw.borrower_comment}</p>
           )}
-          <button type="button" onClick={() => setPanel('details')} className={smallButton}>
-            <Pencil className="h-3.5 w-3.5" />
-            Edit details
-          </button>
-          <FilesButton label="Add files" busy={busy} onFiles={addFiles} className={smallButton} />
-          {isAdmin && (
-            <button type="button" disabled={busy} onClick={remove} className={smallButton} aria-label={`Delete Draw #${draw.number}`}>
-              <Trash2 className="h-3.5 w-3.5 text-slate-400" />
-            </button>
+          {draw.staff_note && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              <span className="font-semibold">Note to borrower:</span> {draw.staff_note}
+            </p>
           )}
+
+          <DrawFiles files={draw.files} onError={onError} />
+
+          {panel === 'status' && <StatusForm key={moveTo} loanId={loanId} draw={draw} initialStatus={moveTo} onDone={done} />}
+          {panel === 'details' && <DetailsForm loanId={loanId} draw={draw} onDone={done} />}
+
+          {panel == null && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button type="button" onClick={() => setPanel('details')} className={smallButton}>
+                <Pencil className="h-3.5 w-3.5" />
+                Edit details
+              </button>
+              <FilesButton label="Add files" busy={busy} onFiles={addFiles} className={smallButton} />
+            </div>
+          )}
+
+          <DrawHistory changes={draw.status_changes} />
         </div>
       )}
-
-      <DrawHistory changes={draw.status_changes} />
     </li>
   )
 }
 
-export default function LoanDraws({ loanId }) {
+const newestFirst = (list) => [...(list ?? [])].sort((a, b) => b.number - a.number)
+
+// initial ({ draws, summary }, from the loan page's single call) skips the first fetch;
+// changes reload from the draws endpoints
+export default function LoanDraws({ loanId, initial }) {
   const { user } = useAuth()
-  const [draws, setDraws] = useState([])
-  const [summary, setSummary] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [draws, setDraws] = useState(() => newestFirst(initial?.draws))
+  const [summary, setSummary] = useState(initial?.summary ?? null)
+  const [loading, setLoading] = useState(!initial)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
+  const [filterId, setFilterId] = useState('all')
+  const [expanded, setExpanded] = useState(() => new Set()) // draw ids
+  const [showClosed, setShowClosed] = useState(false)
 
   const load = useCallback(async () => {
     try {
       const [list, totals] = await Promise.all([fetchDraws(loanId), fetchDrawSummary(loanId)])
-      setDraws([...(list ?? [])].sort((a, b) => b.number - a.number))
+      setDraws(newestFirst(list))
       setSummary(totals)
     } catch (err) {
       setError(errorMessage(err))
@@ -427,15 +598,47 @@ export default function LoanDraws({ loanId }) {
   }, [loanId])
 
   useEffect(() => {
-    load()
-  }, [load])
+    if (!initial) load()
+  }, [load, initial])
 
   if (loading) return <p className="text-sm text-slate-500">Loading draws…</p>
 
   const hasHoldback = summary?.holdback != null
+  const holdback = Number(summary?.holdback ?? 0)
+  const redeemed = Number(summary?.redeemed ?? 0)
+  const inProgress = Number(summary?.in_progress ?? 0)
+
+  const filter = drawFilters.find((f) => f.id === filterId)
+  const isClosed = (d) => closedStatuses.includes(d.status)
+  const openDraws = draws.filter((d) => !isClosed(d) && filter.match(d))
+  const closedDraws = filter.id === 'all' ? draws.filter(isClosed) : []
+  const fundedTotal = closedDraws
+    .filter((d) => d.status === 'funded')
+    .reduce((sum, d) => sum + Number(d.amount_approved ?? 0), 0)
+
+  const setRowExpanded = (id, open) =>
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (open) next.add(id)
+      else next.delete(id)
+      return next
+    })
+
+  const renderRow = (draw) => (
+    <DrawRow
+      key={draw.id}
+      loanId={loanId}
+      draw={draw}
+      isAdmin={user?.role === 'admin'}
+      expanded={expanded.has(draw.id)}
+      onExpandedChange={(open) => setRowExpanded(draw.id, open)}
+      onChanged={load}
+      onError={setError}
+    />
+  )
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}{' '}
@@ -443,26 +646,70 @@ export default function LoanDraws({ loanId }) {
         </p>
       )}
 
-      <div className="space-y-4 rounded-xl border border-slate-200 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-slate-900">Construction holdback</p>
-            <p className="text-xs text-slate-500">
-              {hasHoldback ? 'Every draw comes out of this amount.' : 'Set a holdback to let the borrower request draws.'}
-            </p>
+      <div className="rounded-lg bg-slate-50 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 text-sm">
+            <span className="text-slate-500">Construction holdback</span>
+            {hasHoldback && <span className="font-semibold tabular-nums text-slate-900">{money(summary.holdback)}</span>}
+            <HoldbackForm loanId={loanId} summary={summary} onSaved={load} />
           </div>
-          <HoldbackForm loanId={loanId} summary={summary} onSaved={load} />
+          {hasHoldback ? (
+            <p className="text-xs text-slate-500">
+              <span className="font-semibold tabular-nums text-slate-800">{money(summary.available)}</span> still available
+            </p>
+          ) : (
+            <p className="text-xs text-slate-500">Set a holdback to let the borrower request draws.</p>
+          )}
         </div>
-        {hasHoldback && <DrawSummaryBar summary={summary} />}
+        {hasHoldback && (
+          <>
+            <div
+              className="mt-2 flex h-2 w-full overflow-hidden rounded-full bg-slate-200"
+              role="img"
+              aria-label={`${Math.round(pct(redeemed, holdback))}% redeemed, ${Math.round(pct(inProgress, holdback))}% in progress`}
+            >
+              <div className="h-full bg-emerald-600" style={{ width: `${pct(redeemed, holdback)}%` }} />
+              <div className="h-full bg-blue-400" style={{ width: `${pct(inProgress, holdback)}%` }} />
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-4 text-[11px] text-slate-500">
+              <span className="flex items-center gap-1.5">
+                <i className="h-2 w-2 rounded-full bg-emerald-600" />
+                Redeemed <span className="tabular-nums">{money(redeemed)}</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <i className="h-2 w-2 rounded-full bg-blue-400" />
+                In progress <span className="tabular-nums">{money(inProgress)}</span>
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       {hasHoldback && (
         <>
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold text-slate-900">Draws ({draws.length})</h3>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-2">
+              {draws.length > 0 &&
+                drawFilters.map((f) => {
+                  const active = f.id === filter.id
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setFilterId(f.id)}
+                      aria-pressed={active}
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        active ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      {f.label} <span className={active ? 'text-slate-300' : 'text-slate-400'}>{draws.filter(f.match).length}</span>
+                    </button>
+                  )
+                })}
+            </div>
             {!creating && (
-              <button type="button" onClick={() => setCreating(true)} className={smallButton}>
-                <Plus className="h-3.5 w-3.5" />
+              <button type="button" onClick={() => setCreating(true)} className={primaryButton}>
+                <Plus className="h-4 w-4" />
                 New draw
               </button>
             )}
@@ -482,19 +729,44 @@ export default function LoanDraws({ loanId }) {
 
           {draws.length === 0 ? (
             <p className="text-sm text-slate-400">No draws requested yet.</p>
+          ) : openDraws.length === 0 && closedDraws.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-sm text-slate-500">
+              No draws match “{filter.label}”.
+            </p>
           ) : (
-            <ul className="space-y-3">
-              {draws.map((draw) => (
-                <DrawCard
-                  key={draw.id}
-                  loanId={loanId}
-                  draw={draw}
-                  isAdmin={user?.role === 'admin'}
-                  onChanged={load}
-                  onError={setError}
-                />
-              ))}
-            </ul>
+            <div className="rounded-lg border border-slate-200">
+              <div className="flex items-center gap-3 rounded-t-lg border-b border-l-4 border-slate-200 border-l-transparent bg-slate-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                <span className="flex-1 pl-6">Draw</span>
+                <span className="w-24 text-right">Requested</span>
+                <span className="hidden w-24 text-right sm:block">Approved</span>
+                <span className="w-36" />
+              </div>
+              {openDraws.length > 0 && <ul className="divide-y divide-slate-100">{openDraws.map(renderRow)}</ul>}
+              {closedDraws.length > 0 && (
+                <section className={openDraws.length > 0 ? 'border-t border-slate-200' : undefined}>
+                  <button
+                    type="button"
+                    onClick={() => setShowClosed((s) => !s)}
+                    aria-expanded={showClosed}
+                    className="flex w-full items-center gap-1.5 bg-slate-50 px-3 py-1.5 text-left text-xs font-semibold text-slate-600 last:rounded-b-lg hover:bg-slate-100"
+                  >
+                    {showClosed ? (
+                      <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                    )}
+                    Completed draws
+                    <span className="font-normal text-slate-400">
+                      {closedDraws.length}
+                      {fundedTotal > 0 && <> &middot; {money(fundedTotal)} funded</>}
+                    </span>
+                  </button>
+                  {showClosed && (
+                    <ul className="divide-y divide-slate-100 border-t border-slate-100">{closedDraws.map(renderRow)}</ul>
+                  )}
+                </section>
+              )}
+            </div>
           )}
         </>
       )}

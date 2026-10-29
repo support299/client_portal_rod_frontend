@@ -1,5 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Check, Download, Eye, EyeOff, FilePlus2, FileText, Trash2, Upload, X } from 'lucide-react'
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Download,
+  Eye,
+  EyeOff,
+  FilePlus2,
+  FileText,
+  Search,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react'
 import {
   createDocumentRequest,
   deleteDocumentRequest,
@@ -22,6 +35,20 @@ const smallButton =
   'inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50'
 const primaryButton =
   'inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60'
+const iconButton =
+  'inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:bg-white disabled:opacity-50'
+
+// Filter chips over the request list; `outstanding` is the default while anything is open
+const requestFilters = [
+  { id: 'outstanding', label: 'Needs action', match: (r) => r.status !== 'uploaded' },
+  { id: 'review', label: 'To review', match: (r) => r.status === 'pending_review' },
+  { id: 'waiting', label: 'Waiting on borrower', match: (r) => ['requested', 'needs_revision', 'rejected'].includes(r.status) },
+  { id: 'uploaded', label: 'Complete', match: (r) => r.status === 'uploaded' },
+  { id: 'all', label: 'All', match: () => true },
+]
+
+// Requests without a (known) document type are grouped here
+const fallbackCategory = 'General'
 
 // Keyed by DocumentRequest.Status
 const requestStatus = {
@@ -52,11 +79,18 @@ function fileSize(bytes) {
 }
 
 // Hidden file input behind a button; calls onFile with the chosen File
-function FilePicker({ label, disabled, onFile, className = smallButton }) {
+function FilePicker({ label, title, disabled, onFile, className = smallButton }) {
   const input = useRef(null)
   return (
     <>
-      <button type="button" disabled={disabled} onClick={() => input.current?.click()} className={className}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => input.current?.click()}
+        className={className}
+        title={title}
+        aria-label={title}
+      >
         <Upload className="h-3.5 w-3.5" />
         {label}
       </button>
@@ -206,7 +240,8 @@ function DocumentRow({ loanId, doc, onChanged, onError }) {
   )
 }
 
-function RequestCard({ loanId, request, onChanged, onError }) {
+// One line per request; its description, note and files show when expanded
+function RequestRow({ loanId, request, expanded, onToggle, onChanged, onError }) {
   const [busy, setBusy] = useState(false)
 
   async function run(action) {
@@ -224,21 +259,73 @@ function RequestCard({ loanId, request, onChanged, onError }) {
   const overdue =
     request.due_date && !['uploaded'].includes(request.status) && new Date(`${request.due_date}T23:59:59`) < new Date()
 
+  const fileCount = request.documents.length
+  const Chevron = expanded ? ChevronDown : ChevronRight
+
   return (
-    <li className="rounded-xl border border-slate-200 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h4 className="text-sm font-semibold text-slate-900">{request.name}</h4>
-            <Badge styles={requestStatus} value={request.status} />
-            {request.kind === 'fill_form' && (
-              <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-semibold text-purple-700">Form</span>
-            )}
-            {request.source === 'checklist' && (
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">Checklist</span>
-            )}
-          </div>
-          <p className="mt-0.5 text-xs text-slate-400">
+    <li className={expanded ? 'bg-slate-50/60' : undefined}>
+      <div className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          className="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-left"
+        >
+          <Chevron className="h-4 w-4 shrink-0 text-slate-400" />
+          <span className="truncate text-sm font-medium text-slate-900">{request.name}</span>
+          {fileCount > 0 && (
+            <span className="shrink-0 text-xs text-slate-400">
+              &middot; {fileCount} file{fileCount === 1 ? '' : 's'}
+            </span>
+          )}
+          {request.kind === 'fill_form' && (
+            <span className="shrink-0 rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-semibold text-purple-700">Form</span>
+          )}
+        </button>
+        {request.due_date && (
+          <span className={`hidden shrink-0 text-xs sm:inline ${overdue ? 'font-semibold text-red-600' : 'text-slate-400'}`}>
+            {overdue ? 'Overdue' : 'Due'} {formatDate(request.due_date)}
+          </span>
+        )}
+        <Badge styles={requestStatus} value={request.status} />
+        <div className="flex shrink-0 items-center gap-1">
+          <FilePicker
+            title="Upload for borrower"
+            disabled={busy}
+            className={iconButton}
+            onFile={(file) => run(() => uploadLoanDocument(loanId, { file, request: request.id }))}
+          />
+          {request.status !== 'uploaded' && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => run(() => updateDocumentRequest(loanId, request.id, { status: 'uploaded' }))}
+              className={iconButton}
+              title="Mark complete without reviewing a file"
+              aria-label="Mark complete"
+            >
+              <Check className="h-3.5 w-3.5 text-emerald-600" />
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              window.confirm(`Remove the request for ${request.name}? Its files stay on the loan.`) &&
+              run(() => deleteDocumentRequest(loanId, request.id))
+            }
+            className={iconButton}
+            title="Remove request"
+            aria-label="Remove request"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-slate-400" />
+          </button>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="space-y-2 px-3 pb-3 pl-9">
+          <p className="text-xs text-slate-400">
             {[
               `Requested ${formatDate(request.requested_at)}`,
               request.requested_by?.full_name?.trim() && `by ${request.requested_by.full_name.trim()}`,
@@ -251,68 +338,53 @@ function RequestCard({ loanId, request, onChanged, onError }) {
                 {overdue && ' (overdue)'}
               </span>
             )}
+            {request.source === 'checklist' && <> &middot; Checklist</>}
           </p>
-          {request.description && <p className="mt-1.5 whitespace-pre-line text-sm text-slate-600">{request.description}</p>}
+          {request.description && <p className="whitespace-pre-line text-sm text-slate-600">{request.description}</p>}
           {request.reviewer_note && ['needs_revision', 'rejected'].includes(request.status) && (
-            <p className="mt-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800">Note: {request.reviewer_note}</p>
+            <p className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800">Note: {request.reviewer_note}</p>
+          )}
+          {request.form_document && (
+            <p className="flex flex-wrap items-center gap-2 rounded-lg bg-purple-50 px-3 py-2 text-xs text-purple-800">
+              Blank form shared:
+              <button
+                type="button"
+                onClick={() => openDocument(request.form_document, onError)}
+                className="font-semibold underline-offset-2 hover:underline"
+              >
+                {request.form_document.name}
+              </button>
+            </p>
+          )}
+          {fileCount > 0 ? (
+            <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white px-3">
+              {request.documents.map((doc) => (
+                <DocumentRow key={doc.id} loanId={loanId} doc={doc} onChanged={onChanged} onError={onError} />
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-slate-400">No files yet.</p>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <FilePicker
-            label="Upload for borrower"
-            disabled={busy}
-            onFile={(file) => run(() => uploadLoanDocument(loanId, { file, request: request.id }))}
-          />
-          {request.status !== 'uploaded' && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => run(() => updateDocumentRequest(loanId, request.id, { status: 'uploaded' }))}
-              className={smallButton}
-              title="Mark as received without reviewing a file"
-            >
-              <Check className="h-3.5 w-3.5 text-emerald-600" />
-              Complete
-            </button>
-          )}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() =>
-              window.confirm(`Remove the request for ${request.name}? Its files stay on the loan.`) &&
-              run(() => deleteDocumentRequest(loanId, request.id))
-            }
-            className={smallButton}
-            aria-label="Remove request"
-          >
-            <Trash2 className="h-3.5 w-3.5 text-slate-400" />
-          </button>
-        </div>
-      </div>
-
-      {request.form_document && (
-        <p className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-purple-50 px-3 py-2 text-xs text-purple-800">
-          Blank form shared:
-          <button
-            type="button"
-            onClick={() => openDocument(request.form_document, onError)}
-            className="font-semibold underline-offset-2 hover:underline"
-          >
-            {request.form_document.name}
-          </button>
-        </p>
-      )}
-
-      {request.documents.length > 0 ? (
-        <ul className="mt-3 divide-y divide-slate-100 border-t border-slate-100">
-          {request.documents.map((doc) => (
-            <DocumentRow key={doc.id} loanId={loanId} doc={doc} onChanged={onChanged} onError={onError} />
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-3 text-xs text-slate-400">No files yet.</p>
       )}
     </li>
+  )
+}
+
+// Collapsible heading over a group of rows, with an optional done/total count
+function GroupHeader({ title, count, collapsed, onToggle }) {
+  const Chevron = collapsed ? ChevronRight : ChevronDown
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={!collapsed}
+      className="flex w-full items-center gap-1.5 bg-slate-50 px-3 py-1.5 text-left text-xs font-semibold text-slate-600 hover:bg-slate-100"
+    >
+      <Chevron className="h-3.5 w-3.5 text-slate-400" />
+      {title}
+      {count && <span className="font-normal text-slate-400">{count}</span>}
+    </button>
   )
 }
 
@@ -520,21 +592,37 @@ function ShareForm({ loanId, requests, onCancel, onUploaded }) {
   )
 }
 
-// The Documents tab of the loan panel: requests with their files, then other files
-export default function LoanDocuments({ loanId }) {
-  const [requests, setRequests] = useState([])
-  const [otherFiles, setOtherFiles] = useState([])
-  const [types, setTypes] = useState([])
-  const [loading, setLoading] = useState(true)
+// Files sent against a request show under it, not in "Other files"
+const withoutRequest = (files) => (files ?? []).filter((f) => !f.request)
+
+// The Documents tab of the loan panel: requests as compact rows grouped by category, then other files.
+// initial ({ requests, documents, types }, from the loan page's single call) skips the first fetch;
+// changes reload from the documents endpoints.
+export default function LoanDocuments({ loanId, initial }) {
+  const [requests, setRequests] = useState(initial?.requests ?? [])
+  const [otherFiles, setOtherFiles] = useState(() => withoutRequest(initial?.documents))
+  const [types, setTypes] = useState(initial?.types ?? [])
+  const [loading, setLoading] = useState(!initial)
   const [error, setError] = useState('')
   const [adding, setAdding] = useState(null) // 'request' | 'file' | null
+  const [filterChoice, setFilterChoice] = useState(null) // null: pick by what's outstanding
+  const [query, setQuery] = useState('')
+  const [expanded, setExpanded] = useState(() => new Set()) // request ids
+  const [collapsed, setCollapsed] = useState(() => new Set()) // category names, plus otherFilesKey
+  const otherFilesKey = '__other_files__'
+
+  const toggle = (setter, key) =>
+    setter((prev) => {
+      const next = new Set(prev)
+      if (!next.delete(key)) next.add(key)
+      return next
+    })
 
   const load = useCallback(async () => {
     try {
       const [reqs, files] = await Promise.all([fetchDocumentRequests(loanId), fetchLoanDocuments(loanId)])
       setRequests(reqs ?? [])
-      // Files sent against a request show under it
-      setOtherFiles((files ?? []).filter((f) => !f.request))
+      setOtherFiles(withoutRequest(files))
     } catch (err) {
       setError(errorMessage(err))
     } finally {
@@ -543,21 +631,54 @@ export default function LoanDocuments({ loanId }) {
   }, [loanId])
 
   useEffect(() => {
+    if (initial) return
     load()
     fetchDocumentTypes()
       .then((data) => setTypes(data ?? []))
       .catch(() => setTypes([]))
-  }, [load])
+  }, [load, initial])
 
   const open = requests.filter((r) => r.status !== 'uploaded').length
+  const done = requests.length - open
+  const filter = requestFilters.find((f) => f.id === (filterChoice ?? (open > 0 ? 'outstanding' : 'all')))
+  const search = query.trim().toLowerCase()
+  const matchesSearch = (name) => !search || name?.toLowerCase().includes(search)
+
+  // Requests grouped by their document type's category, A–Z with the fallback last
+  const categoryOf = new Map(types.map((t) => [t.id, t.category || fallbackCategory]))
+  const byCategory = new Map()
+  for (const r of requests) {
+    const title = categoryOf.get(r.document_type) ?? fallbackCategory
+    if (!byCategory.has(title)) byCategory.set(title, { title, total: 0, done: 0, rows: [] })
+    const group = byCategory.get(title)
+    group.total += 1
+    if (r.status === 'uploaded') group.done += 1
+    if (filter.match(r) && matchesSearch(r.name)) group.rows.push(r)
+  }
+  const groups = [...byCategory.values()]
+    .filter((g) => g.rows.length > 0)
+    .sort((a, b) => (a.title === fallbackCategory) - (b.title === fallbackCategory) || a.title.localeCompare(b.title))
+
+  const shownOtherFiles = otherFiles.filter((f) => matchesSearch(f.name))
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-slate-500">
-          {requests.length} request{requests.length === 1 ? '' : 's'}
-          {requests.length > 0 && <> &middot; {open} outstanding</>}
-        </p>
+        {requests.length > 0 ? (
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-32 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full bg-emerald-500" style={{ width: `${(done / requests.length) * 100}%` }} />
+            </div>
+            <p className="text-xs text-slate-500">
+              <span className="font-semibold text-slate-700">
+                {done} of {requests.length}
+              </span>{' '}
+              complete
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">No requests yet</p>
+        )}
         <div className="flex gap-2">
           <button type="button" onClick={() => setAdding('request')} className={primaryButton}>
             <FilePlus2 className="h-4 w-4" />
@@ -610,31 +731,96 @@ export default function LoanDocuments({ loanId }) {
         <p className="text-sm text-slate-500">Loading documents…</p>
       ) : (
         <>
-          <section>
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Requested from borrower</h3>
-            {requests.length === 0 ? (
-              <p className="mt-2 text-sm text-slate-500">No documents requested yet.</p>
-            ) : (
-              <ul className="mt-2 space-y-3">
-                {requests.map((r) => (
-                  <RequestCard key={r.id} loanId={loanId} request={r} onChanged={load} onError={setError} />
-                ))}
-              </ul>
-            )}
-          </section>
+          {(requests.length > 0 || otherFiles.length > 0) && (
+            <div className="flex flex-wrap items-center gap-2">
+              {requests.length > 0 &&
+                requestFilters.map((f) => {
+                  const active = f.id === filter.id
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setFilterChoice(f.id)}
+                      aria-pressed={active}
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        active ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      {f.label}{' '}
+                      <span className={active ? 'text-slate-300' : 'text-slate-400'}>{requests.filter(f.match).length}</span>
+                    </button>
+                  )
+                })}
+              <label className="relative ml-auto">
+                <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search documents"
+                  aria-label="Search documents"
+                  className="w-40 rounded-lg border border-slate-200 py-1 pl-7 pr-2 text-xs focus:border-emerald-400 focus:outline-none"
+                />
+              </label>
+            </div>
+          )}
 
-          <section>
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Other files</h3>
-            {otherFiles.length === 0 ? (
-              <p className="mt-2 text-sm text-slate-500">No other files.</p>
-            ) : (
-              <ul className="mt-1 divide-y divide-slate-100">
-                {otherFiles.map((doc) => (
-                  <DocumentRow key={doc.id} loanId={loanId} doc={doc} onChanged={load} onError={setError} />
+          {requests.length === 0 ? (
+            <p className="text-sm text-slate-500">No documents requested yet.</p>
+          ) : groups.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-sm text-slate-500">
+              No requests match{search ? ' your search' : ` “${filter.label}”`}.
+            </p>
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-slate-200">
+              {groups.map((g) => (
+                <section key={g.title} className="border-t border-slate-200 first:border-t-0">
+                  <GroupHeader
+                    title={g.title}
+                    count={`${g.done}/${g.total}`}
+                    collapsed={collapsed.has(g.title)}
+                    onToggle={() => toggle(setCollapsed, g.title)}
+                  />
+                  {!collapsed.has(g.title) && (
+                    <ul className="divide-y divide-slate-100 border-t border-slate-100">
+                      {g.rows.map((r) => (
+                        <RequestRow
+                          key={r.id}
+                          loanId={loanId}
+                          request={r}
+                          expanded={expanded.has(r.id)}
+                          onToggle={() => toggle(setExpanded, r.id)}
+                          onChanged={load}
+                          onError={setError}
+                        />
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              ))}
+            </div>
+          )}
+
+          {otherFiles.length > 0 && (
+            <section className="overflow-hidden rounded-lg border border-slate-200">
+              <GroupHeader
+                title="Other files"
+                count={String(otherFiles.length)}
+                collapsed={collapsed.has(otherFilesKey)}
+                onToggle={() => toggle(setCollapsed, otherFilesKey)}
+              />
+              {!collapsed.has(otherFilesKey) &&
+                (shownOtherFiles.length === 0 ? (
+                  <p className="border-t border-slate-100 px-3 py-3 text-sm text-slate-500">No files match your search.</p>
+                ) : (
+                  <ul className="divide-y divide-slate-100 border-t border-slate-100 px-3">
+                    {shownOtherFiles.map((doc) => (
+                      <DocumentRow key={doc.id} loanId={loanId} doc={doc} onChanged={load} onError={setError} />
+                    ))}
+                  </ul>
                 ))}
-              </ul>
-            )}
-          </section>
+            </section>
+          )}
         </>
       )}
     </div>

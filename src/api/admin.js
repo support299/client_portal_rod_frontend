@@ -44,6 +44,12 @@ export async function fetchLoan(id) {
   return apiRequest(`/api/loans/${id}/`)
 }
 
+// Everything the staff loan page shows in one call: loan, stages, draws, draw_summary,
+// document_requests, documents, document_types and notes
+export async function fetchLoanPage(id) {
+  return apiRequest(`/api/loans/${id}/page/`)
+}
+
 // The loan pipeline's stages in order; a loan's status is one of these ids
 export async function fetchLoanStages() {
   return apiRequest('/api/loans/stages/')

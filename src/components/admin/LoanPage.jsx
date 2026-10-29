@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Mail, MessageSquare, Pencil, Phone, X } from 'lucide-react'
-import { fetchLoan, fetchLoanStages } from '../../api/admin'
+import { fetchLoanPage } from '../../api/admin'
 import { fetchLoanChat } from '../../api/chats'
 import { useAuth } from '../../common/auth/AuthContext'
 import { money } from '../../utils/draws'
 import { errorMessage } from '../../utils/errors'
-import { formatDate } from '../../utils/format'
+import { customFieldValue, formatDate } from '../../utils/format'
 import { DetailGroup, DetailRow } from './DetailList'
 import LoanDocuments from './LoanDocuments'
 import LoanDraws from './LoanDraws'
@@ -18,6 +18,7 @@ const sections = [
   { id: 'overview', label: 'Overview' },
   { id: 'draws', label: 'Draws' },
   { id: 'documents', label: 'Documents' },
+  { id: 'details', label: 'Details' },
   { id: 'contacts', label: 'Contacts' },
   { id: 'notes', label: 'Notes' },
 ]
@@ -26,6 +27,108 @@ const card = 'rounded-xl border border-slate-200 bg-white p-5 sm:p-6'
 
 function personName(user) {
   return user?.full_name?.trim() || user?.email || null
+}
+
+// GHL custom fields with a value, named by the API (label) or, failing that, by their id
+function namedFields(fields) {
+  return (Array.isArray(fields) ? fields : [])
+    .map((field) => ({ id: field.id, label: field.label, value: customFieldValue(field) }))
+    .filter((field) => field.value != null)
+}
+
+function CustomFieldRows({ fields }) {
+  return fields.map((field) => (
+    <DetailRow key={field.id} label={field.label || <span className="font-mono text-xs">{field.id}</span>}>
+      {field.value}
+    </DetailRow>
+  ))
+}
+
+// Everything synced from GHL about the loan's contact and opportunity
+function LoanDetails({ loan }) {
+  const contact = loan.contact_details
+  const address = contact && [contact.address1, contact.city, [contact.state, contact.postal_code].filter(Boolean).join(' '), contact.country]
+    .filter(Boolean)
+    .join(', ')
+  const contactFields = namedFields(contact?.custom_fields)
+  const opportunityFields = namedFields(loan.custom_fields)
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <DetailGroup title="Contact">
+          {contact ? (
+            <>
+              <DetailRow label="Name">{contact.contact_name || [contact.first_name, contact.last_name].filter(Boolean).join(' ')}</DetailRow>
+              <DetailRow label="Company">{contact.company_name}</DetailRow>
+              <DetailRow label="Email">
+                {contact.email && <a href={`mailto:${contact.email}`} className="text-emerald-700 hover:underline">{contact.email}</a>}
+              </DetailRow>
+              <DetailRow label="Phone">
+                {contact.phone && (
+                  <a href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`} className="text-emerald-700 hover:underline">{contact.phone}</a>
+                )}
+              </DetailRow>
+              <DetailRow label="Website">{contact.website}</DetailRow>
+              <DetailRow label="Address">{address}</DetailRow>
+              <DetailRow label="Type"><span className="capitalize">{contact.type}</span></DetailRow>
+              <DetailRow label="Source">{contact.source}</DetailRow>
+              <DetailRow label="Timezone">{contact.timezone}</DetailRow>
+              <DetailRow label="Do not disturb">{contact.dnd ? 'Yes' : 'No'}</DetailRow>
+              <DetailRow label="Added in GHL">{formatDate(contact.date_added, true)}</DetailRow>
+              {contact.tags?.length > 0 && (
+                <div className="flex flex-wrap justify-end gap-1.5 py-2">
+                  {contact.tags.map((tag) => (
+                    <span key={tag} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{tag}</span>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="py-2 text-sm text-slate-400">No GHL contact on this opportunity.</p>
+          )}
+        </DetailGroup>
+
+        <DetailGroup title="Opportunity">
+          <DetailRow label="Pipeline">{loan.pipeline_name}</DetailRow>
+          <DetailRow label="Stage">{loan.stage_name}</DetailRow>
+          <DetailRow label="Status">
+            {loan.opportunity_status && <span className="capitalize">{loan.opportunity_status}</span>}
+          </DetailRow>
+          <DetailRow label="Source">{loan.source}</DetailRow>
+          <DetailRow label="Expected close">{formatDate(loan.expected_close_date)}</DetailRow>
+          <DetailRow label="Original close">{formatDate(loan.original_close_date)}</DetailRow>
+          <DetailRow label="Lost reason ID">{loan.lost_reason_id}</DetailRow>
+          <DetailRow label="Stage changed">{formatDate(loan.last_stage_change_at, true)}</DetailRow>
+          <DetailRow label="Status changed">{formatDate(loan.last_status_change_at, true)}</DetailRow>
+          <DetailRow label="Created in GHL">{formatDate(loan.opportunity_created_at, true)}</DetailRow>
+          <DetailRow label="Updated in GHL">{formatDate(loan.opportunity_updated_at, true)}</DetailRow>
+          <CustomFieldRows fields={opportunityFields} />
+        </DetailGroup>
+      </div>
+
+      {contactFields.length > 0 && (
+        <DetailGroup title="Application details">
+          <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2">
+            <CustomFieldRows fields={contactFields} />
+          </div>
+        </DetailGroup>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <DetailGroup title="IDs">
+          <DetailRow label="Opportunity ID"><span className="font-mono text-xs">{loan.opportunity}</span></DetailRow>
+          <DetailRow label="Contact ID"><span className="font-mono text-xs">{loan.contact}</span></DetailRow>
+          <DetailRow label="Location ID"><span className="font-mono text-xs">{loan.location_id}</span></DetailRow>
+        </DetailGroup>
+        <DetailGroup title="Record">
+          <DetailRow label="Created">{formatDate(loan.created_at, true)}</DetailRow>
+          <DetailRow label="Last updated">{formatDate(loan.updated_at, true)}</DetailRow>
+          <DetailRow label="Last synced from GHL">{formatDate(loan.synced_at, true)}</DetailRow>
+        </DetailGroup>
+      </div>
+    </div>
+  )
 }
 
 function ContactCard({ person, label, badge }) {
@@ -86,7 +189,8 @@ export default function LoanPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [loan, setLoan] = useState(null)
-  const [stages, setStages] = useState([])
+  // The rest of the single page call; each section takes its part and refreshes itself after that
+  const [page, setPage] = useState(null)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -95,13 +199,20 @@ export default function LoanPage() {
   useEffect(() => {
     let cancelled = false
     setLoan(null)
+    setPage(null)
     setError('')
-    fetchLoan(loanId)
-      .then((data) => !cancelled && setLoan(data))
+    fetchLoanPage(loanId)
+      .then((data) => {
+        if (cancelled) return
+        setLoan(data.loan)
+        setPage({
+          stages: Array.isArray(data.stages) ? data.stages : [],
+          draws: { draws: data.draws, summary: data.draw_summary },
+          documents: { requests: data.document_requests, documents: data.documents, types: data.document_types },
+          notes: data.notes,
+        })
+      })
       .catch((err) => !cancelled && setError(errorMessage(err)))
-    fetchLoanStages()
-      .then((data) => !cancelled && setStages(Array.isArray(data) ? data : []))
-      .catch(() => !cancelled && setStages([]))
     return () => {
       cancelled = true
     }
@@ -215,7 +326,7 @@ export default function LoanPage() {
             </div>
             <EditLoanForm
               loan={loan}
-              stages={stages}
+              stages={page.stages}
               canReassign={user?.role === 'admin'}
               onCancel={() => setEditing(false)}
               onSavingChange={setSaving}
@@ -247,14 +358,19 @@ export default function LoanPage() {
         ))}
       </nav>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="min-w-0 space-y-6 lg:col-span-2">
+      {/* Wide screens: the main column takes the extra width, the side column stays readable */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="min-w-0 space-y-6 lg:col-span-2 xl:col-span-1">
           <Section id="draws" title="Draw Requests">
-            <LoanDraws loanId={loan.id} />
+            <LoanDraws loanId={loan.id} initial={page.draws} />
           </Section>
 
           <Section id="documents" title="Documents">
-            <LoanDocuments loanId={loan.id} />
+            <LoanDocuments loanId={loan.id} initial={page.documents} />
+          </Section>
+
+          <Section id="details" title="Loan & Contact Details">
+            <LoanDetails loan={loan} />
           </Section>
         </div>
 
@@ -275,29 +391,8 @@ export default function LoanPage() {
           </Section>
 
           <Section id="notes" title="Internal Notes">
-            <LoanNotes loanId={loan.id} />
+            <LoanNotes loanId={loan.id} initialNotes={page.notes} />
           </Section>
-
-          <section className={card}>
-            <div className="space-y-6">
-              <DetailGroup title="CRM">
-                <DetailRow label="Pipeline">{loan.pipeline_name}</DetailRow>
-                <DetailRow label="Stage">{loan.stage_name}</DetailRow>
-                <DetailRow label="Opportunity status">
-                  {loan.opportunity_status && <span className="capitalize">{loan.opportunity_status}</span>}
-                </DetailRow>
-                <DetailRow label="Source">{loan.source}</DetailRow>
-                <DetailRow label="Lost reason ID">{loan.lost_reason_id}</DetailRow>
-                <DetailRow label="Opportunity ID">{loan.opportunity}</DetailRow>
-                <DetailRow label="Contact ID">{loan.contact}</DetailRow>
-                <DetailRow label="Location ID">{loan.location_id}</DetailRow>
-              </DetailGroup>
-              <DetailGroup title="Record">
-                <DetailRow label="Created">{formatDate(loan.created_at, true)}</DetailRow>
-                <DetailRow label="Last updated">{formatDate(loan.updated_at, true)}</DetailRow>
-              </DetailGroup>
-            </div>
-          </section>
         </div>
       </div>
     </div>

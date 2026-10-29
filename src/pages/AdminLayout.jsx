@@ -10,6 +10,8 @@ export default function AdminLayout() {
 
   const activeSection = adminNavSections.find((s) => s.path === location.pathname)
   const subtitle = activeSection ? adminSectionSubtitles[activeSection.id] : undefined
+  // The loan detail page uses the screen's width; the other pages keep a narrower column
+  const isLoanPage = /^\/admin\/loans\/\d+\/?$/.test(location.pathname)
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -19,7 +21,7 @@ export default function AdminLayout() {
         <AdminTopbar onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-6xl">
+          <div className={`mx-auto ${isLoanPage ? 'max-w-[1920px]' : 'max-w-6xl'}`}>
             {activeSection && (
               <div className="mb-6">
                 <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">

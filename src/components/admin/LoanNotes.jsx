@@ -151,10 +151,13 @@ function NoteCard({ loanId, note, onChanged, onError }) {
   )
 }
 
-/** A loan's internal notes for staff: add, pin, edit and delete. Pinned notes come first. */
-export default function LoanNotes({ loanId }) {
-  const [notes, setNotes] = useState([])
-  const [loading, setLoading] = useState(true)
+/**
+ * A loan's internal notes for staff: add, pin, edit and delete. Pinned notes come first.
+ * initialNotes (from the loan page's single call) skips the first fetch; changes reload from the notes endpoint.
+ */
+export default function LoanNotes({ loanId, initialNotes }) {
+  const [notes, setNotes] = useState(initialNotes ?? [])
+  const [loading, setLoading] = useState(!initialNotes)
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
@@ -169,8 +172,8 @@ export default function LoanNotes({ loanId }) {
   }, [loanId])
 
   useEffect(() => {
-    load()
-  }, [load])
+    if (!initialNotes) load()
+  }, [load, initialNotes])
 
   return (
     <div className="space-y-4">
