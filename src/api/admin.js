@@ -50,6 +50,12 @@ export async function fetchLoanPage(id) {
   return apiRequest(`/api/loans/${id}/page/`)
 }
 
+// Review work waiting on staff: { open, done }. scope: 'mine' (loans you're an officer on) or
+// 'all' (admins only)
+export async function fetchTasks(scope = 'mine') {
+  return apiRequest(`/api/loans/tasks/?scope=${scope}`)
+}
+
 // The loan pipeline's stages in order; a loan's status is one of these ids
 export async function fetchLoanStages() {
   return apiRequest('/api/loans/stages/')

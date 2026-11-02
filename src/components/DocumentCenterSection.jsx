@@ -8,6 +8,7 @@ import {
   openBlob,
   uploadLoanDocument,
 } from '../api/documents'
+import { awaitingStatuses } from '../hooks/useLoans'
 import { errorMessage } from '../utils/errors'
 import { formatDate } from '../utils/format'
 
@@ -95,7 +96,7 @@ function DownloadButton({ doc, onError }) {
   )
 }
 
-function RequestItem({ loanId, request, userId, onChanged, onError }) {
+export function RequestItem({ loanId, request, userId, onChanged, onError }) {
   const [busy, setBusy] = useState(false)
   const [label, classes, Icon] = requestStatus[request.status] ?? requestStatus.requested
   const needsAction = ['requested', 'needs_revision', 'rejected'].includes(request.status)
@@ -265,10 +266,8 @@ function FileList({ files, emptyText, onError }) {
   )
 }
 
-const awaitingStatuses = ['requested', 'needs_revision', 'rejected']
-
 // One tab per loan, with how many documents each is waiting on
-function LoanTabs({ loans, selectedId, onChange, refreshKey }) {
+export function LoanTabs({ loans, selectedId, onChange, refreshKey }) {
   const [waiting, setWaiting] = useState({})
 
   useEffect(() => {

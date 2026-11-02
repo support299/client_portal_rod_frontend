@@ -1,12 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Landmark, CheckSquare, FileWarning, ChevronRight } from 'lucide-react'
 import { pipelineStages } from './PipelineSection'
-
-const taskPriorityStyles = {
-  High: 'bg-red-100 text-red-700',
-  Medium: 'bg-amber-100 text-amber-800',
-  Low: 'bg-slate-100 text-slate-600',
-}
+import { fetchTasks } from '../../api/admin'
+import { timeAgo } from '../../utils/format'
 
 function StatCard({ label, value, icon: Icon }) {
   return (
@@ -38,18 +35,15 @@ function SectionCard({ title, viewAllTo, children }) {
   )
 }
 
-export default function AdminOverview({
-  pipelineLoans = [],
-  tasks = [],
-  missingDocuments = [],
-  recentUploads = [],
-  staffUser = null,
-}) {
-  const openTasksCount = tasks.filter((t) => t.status !== 'Done').length
-  const staffName = staffUser?.name ?? ''
-  const myTasks = tasks
-    .filter((t) => (staffName ? t.assignee === staffName : true) && t.status !== 'Done')
-    .slice(0, 4)
+export default function AdminOverview({ pipelineLoans = [], missingDocuments = [], recentUploads = [] }) {
+  // Review tasks on the loans you're an officer on (see TasksSection)
+  const [tasks, setTasks] = useState(null)
+  useEffect(() => {
+    fetchTasks('mine')
+      .then((data) => setTasks(data.open))
+      .catch(() => setTasks([]))
+  }, [])
+  const myTasks = (tasks ?? []).slice(0, 4)
 
   const pipelineTotal = pipelineLoans.length || 1
 
@@ -57,7 +51,7 @@ export default function AdminOverview({
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label="Active Loans" value={pipelineLoans.length} icon={Landmark} />
-        <StatCard label="Open Tasks" value={openTasksCount} icon={CheckSquare} />
+        <StatCard label="Open Tasks" value={tasks ? tasks.length : '—'} icon={CheckSquare} />
         <StatCard label="Missing Documents" value={missingDocuments.length} icon={FileWarning} />
       </div>
 
@@ -96,21 +90,17 @@ export default function AdminOverview({
           <SectionCard title="My Tasks" viewAllTo="/admin/tasks">
             <ul className="mt-4 divide-y divide-slate-100">
               {myTasks.map((task) => (
-                <li key={task.id} className="flex items-center justify-between gap-3 py-3">
-                  <div>
+                <li key={task.id} className="py-3">
+                  <Link to="/admin/tasks" className="block hover:text-emerald-700">
                     <p className="text-sm font-semibold text-slate-900">{task.title}</p>
                     <p className="text-xs text-slate-400">
-                      {task.loanNumber} &middot; {task.borrower} &middot; Due {task.dueDate}
+                      {task.loan.name}
+                      {task.loan.borrower && <> &middot; {task.loan.borrower}</>} &middot; {timeAgo(task.at)}
                     </p>
-                  </div>
-                  <span
-                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${taskPriorityStyles[task.priority] ?? 'bg-slate-100 text-slate-600'}`}
-                  >
-                    {task.priority}
-                  </span>
+                  </Link>
                 </li>
               ))}
-              {myTasks.length === 0 && (
+              {tasks && myTasks.length === 0 && (
                 <li className="py-4 text-center text-sm text-slate-400">You&apos;re all caught up.</li>
               )}
             </ul>

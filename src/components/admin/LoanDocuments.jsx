@@ -124,7 +124,7 @@ async function saveDocument(doc, onError) {
   }
 }
 
-function DocumentRow({ loanId, doc, onChanged, onError }) {
+export function DocumentRow({ loanId, doc, onChanged, onError }) {
   const [busy, setBusy] = useState(false)
   const [rejecting, setRejecting] = useState(false)
   const [note, setNote] = useState('')

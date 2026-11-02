@@ -10,7 +10,6 @@ import DocumentCenterSection from './DocumentCenterSection'
 import MarketToolsSection from './MarketToolsSection'
 import TeamSection from './TeamSection'
 import ResourceCenterSection from './ResourceCenterSection'
-import CalendarSection from './CalendarSection'
 import ChatPanel from './chat/ChatPanel'
 
 function SectionHeader({ label, subtitle, onBack }) {
@@ -181,9 +180,6 @@ export default function SectionPage({
           }
         />
       )
-      break
-    case 'calendar':
-      content = <CalendarSection properties={loans} />
       break
     case 'profile':
       content = <ProfileSection />

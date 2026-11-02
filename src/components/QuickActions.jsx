@@ -1,11 +1,9 @@
-import { Upload, MessageSquare, Download, CalendarClock } from 'lucide-react'
+import { Upload, MessageSquare, Download } from 'lucide-react'
 
 const actions = [
   { label: 'Upload Documents', icon: Upload, section: 'documents' },
   { label: 'Message My Loan Officer', icon: MessageSquare, section: 'messages' },
-  { label: 'Download Documents', icon: Download, section: 'documents' },
-  { label: 'Schedule a Call', icon: CalendarClock, section: 'calendar' },
-]
+  { label: 'Download Documents', icon: Download, section: 'documents' },]
 
 export default function QuickActions({ onNavigate }) {
   return (

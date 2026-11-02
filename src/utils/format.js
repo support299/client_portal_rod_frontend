@@ -13,6 +13,16 @@ export function formatDate(value, withTime = false) {
   })
 }
 
+// "5m ago", "3h ago", "2d ago", then the date
+export function timeAgo(value) {
+  const minutes = Math.round((Date.now() - new Date(value).getTime()) / 60000)
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes}m ago`
+  if (minutes < 24 * 60) return `${Math.round(minutes / 60)}h ago`
+  if (minutes < 7 * 24 * 60) return `${Math.round(minutes / (24 * 60))}d ago`
+  return formatDate(value)
+}
+
 // GHL stores the value under a type-specific key (fieldValueString, fieldValueNumber, …)
 export function customFieldValue(field) {
   const key = Object.keys(field).find((k) => k.startsWith('fieldValue') || k === 'value')

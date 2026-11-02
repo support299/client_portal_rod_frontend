@@ -9,13 +9,12 @@ export default function RecentActivity({ items = [] }) {
         <ul className="mt-4 space-y-4">
           {items.map((item) => (
             <li key={item.id} className="flex items-start gap-3">
+              {/* Amber: still waiting on the borrower */}
               <span
-                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                  item.done ? 'bg-emerald-500' : 'bg-slate-300'
-                }`}
+                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.you ? 'bg-amber-500' : 'bg-emerald-500'}`}
               />
               <div>
-                <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                <p className="text-sm font-medium text-slate-900">{item.title}</p>
                 <p className="text-sm text-slate-400">{item.time}</p>
               </div>
             </li>

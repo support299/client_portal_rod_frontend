@@ -1,20 +1,18 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../common/auth/AuthContext'
 import { navSections } from '../common/constants/nav'
 import { useLoanDetail, useMyLoans } from '../hooks/useLoans'
 import Sidebar from '../components/Sidebar'
 import Topbar from '../components/Topbar'
-import PropertySelector from '../components/PropertySelector'
-import QuickActions from '../components/QuickActions'
+import { LoanTabs } from '../components/DocumentCenterSection'
+import NextStep from '../components/NextStep'
 import StatusTracker from '../components/StatusTracker'
-import UrgentAction from '../components/UrgentAction'
-import StatCards from '../components/StatCards'
-import DealHealthBadge from '../components/DealHealthBadge'
+import DocumentChecklist from '../components/DocumentChecklist'
 import AssignedOfficer from '../components/AssignedOfficer'
 import RecentActivity from '../components/RecentActivity'
 import SectionPage from '../components/SectionPage'
-import { Plus } from 'lucide-react'
+import { ChevronRight, Plus } from 'lucide-react'
 
 // Sections the URL may name: the sidebar's, plus ones reached from inside other sections
 const knownSections = new Set([...navSections.map((s) => s.id), 'conditions', 'deal-timeline', 'my-team'])
@@ -55,7 +53,9 @@ export default function Dashboard() {
     [setSearchParams],
   )
 
-  const { detail, loading: detailLoading } = useLoanDetail(selectedProperty)
+  const { detail, loading: detailLoading, error: detailError, reload: reloadDetail } = useLoanDetail(selectedProperty)
+  const checklistRef = useRef(null)
+  const showChecklist = () => checklistRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
   const openLoanDashboard = (property) => setActiveSection('dashboard', property.id)
 
@@ -92,46 +92,77 @@ export default function Dashboard() {
               </div>
             ) : hasLoans ? (
               <div className="mx-auto max-w-6xl">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
-                    <h1 className="text-[26px] font-bold text-slate-900 sm:text-[33px]">
-                      Welcome back{welcomeName ? `, ${welcomeName}` : ''}
-                    </h1>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Here&apos;s what&apos;s happening with your loan today.
-                    </p>
+                <h1 className="text-[26px] font-bold text-slate-900 sm:text-[33px]">
+                  Welcome back{welcomeName ? `, ${welcomeName}` : ''}
+                </h1>
+                <p className="mt-1 text-sm text-slate-500">
+                  {loans.length > 1
+                    ? `You have ${loans.length} deals with us. Pick one to see where it stands.`
+                    : 'Here’s where your loan stands and what comes next.'}
+                </p>
+
+                {loans.length > 1 && (
+                  <div className="mt-5">
+                    <LoanTabs
+                      loans={loans}
+                      selectedId={selectedId}
+                      onChange={setSelectedProperty}
+                      refreshKey={detail?.requests}
+                    />
                   </div>
-                  <QuickActions onNavigate={setActiveSection} />
-                </div>
+                )}
 
-                <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <PropertySelector
-                    properties={loans}
-                    selected={selectedProperty}
-                    onChange={setSelectedProperty}
-                  />
-                  {selectedProperty?.health && (
-                    <DealHealthBadge health={selectedProperty.health} />
-                  )}
-                </div>
-
-                {detailLoading ? (
+                {detailError ? (
+                  <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-6 py-6 text-sm text-red-700">
+                    {detailError}{' '}
+                    <button type="button" onClick={reloadDetail} className="font-semibold underline">
+                      Try again
+                    </button>
+                  </div>
+                ) : detailLoading || !detail ? (
                   <p className="mt-8 text-sm text-slate-500">Loading deal details…</p>
                 ) : (
                   <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-                    <div className="space-y-6 lg:col-span-2">
-                      <StatusTracker
-                        loanStages={detail?.loanStages}
-                        currentStatus={detail?.currentStatus}
-                        stageName={detail?.loan?.stageName}
+                    <div className="min-w-0 space-y-6 lg:col-span-2">
+                      <NextStep detail={detail} onNavigate={setActiveSection} onShowChecklist={showChecklist} />
+                      <StatusTracker detail={detail} />
+                      <DocumentChecklist
+                        ref={checklistRef}
+                        detail={detail}
+                        userId={user?.id}
+                        onChanged={reloadDetail}
+                        onNavigate={setActiveSection}
                       />
-                      <UrgentAction urgentAction={detail?.urgentAction} />
-                      <StatCards property={detail?.loan || selectedProperty} />
                     </div>
 
                     <div className="space-y-6">
-                      <AssignedOfficer officer={detail?.assignedOfficer} />
-                      <RecentActivity items={detail?.recentActivity || []} />
+                      <AssignedOfficer
+                        officer={detail.assignedOfficer}
+                        onMessage={() => setActiveSection('messages')}
+                      />
+                      <RecentActivity items={detail.recentActivity} />
+                      <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+                        <h2 className="text-base font-semibold text-slate-900">Shortcuts</h2>
+                        <div className="mt-3 divide-y divide-slate-100">
+                          {[
+                            detail.funded && ['Request a draw', 'draw-requests'],
+                            ['All my documents', 'documents'],
+                            ['Rehab & ARV calculators', 'tools'],
+                          ]
+                            .filter(Boolean)
+                            .map(([label, section]) => (
+                              <button
+                                key={section}
+                                type="button"
+                                onClick={() => setActiveSection(section)}
+                                className="flex w-full items-center justify-between py-2.5 text-left text-sm font-medium text-slate-700 hover:text-emerald-700"
+                              >
+                                {label}
+                                <ChevronRight className="h-4 w-4 text-slate-400" />
+                              </button>
+                            ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}

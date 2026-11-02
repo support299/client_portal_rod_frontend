@@ -7,7 +7,7 @@ import {
 import { useAuth } from '../common/auth/AuthContext'
 import { useChatSocket } from '../hooks/useChatSocket'
 import { errorMessage } from '../utils/errors'
-import { formatDate } from '../utils/format'
+import { timeAgo } from '../utils/format'
 
 const PAGE_SIZE = 20
 
@@ -19,15 +19,6 @@ const kinds = {
   document_uploaded: [FileText, 'bg-blue-100 text-blue-700', 'documents', 'documents'],
   document_reviewed: [FileText, 'bg-blue-100 text-blue-700', 'documents', 'documents'],
   loan_assigned: [UserPlus, 'bg-indigo-100 text-indigo-700', 'dashboard', 'overview'],
-}
-
-function timeAgo(value) {
-  const minutes = Math.round((Date.now() - new Date(value).getTime()) / 60000)
-  if (minutes < 1) return 'Just now'
-  if (minutes < 60) return `${minutes}m ago`
-  if (minutes < 24 * 60) return `${Math.round(minutes / 60)}h ago`
-  if (minutes < 7 * 24 * 60) return `${Math.round(minutes / (24 * 60))}d ago`
-  return formatDate(value)
 }
 
 function NotificationItem({ notification, onOpen }) {
