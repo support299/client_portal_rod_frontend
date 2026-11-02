@@ -1,18 +1,13 @@
 import { NavLink } from 'react-router-dom'
-import { ShieldCheck, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { adminNavSections } from '../../common/constants/adminNav'
+import logo from '../../assets/flip-funding-logo-light.svg'
 
 function AdminSidebarContent({ onNavigate }) {
   return (
     <div className="flex h-full flex-col bg-slate-900">
-      <div className="flex items-center gap-3 px-6 py-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
-          <ShieldCheck className="h-5 w-5" />
-        </div>
-        <div>
-          <p className="text-lg font-bold leading-tight text-white">Flip Funding</p>
-          <p className="text-xs text-slate-400">Staff Console</p>
-        </div>
+      <div className="px-6 py-6">
+        <img src={logo} alt="Flip Funding" className="h-12 w-auto" />
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 pb-4">

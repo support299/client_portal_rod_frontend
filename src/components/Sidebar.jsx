@@ -1,17 +1,12 @@
-import { Landmark, Plus, X } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import { navSections } from '../common/constants/nav'
+import logo from '../assets/flip-funding-logo.png'
 
 function SidebarContent({ activeSection, onSelect }) {
   return (
     <div className="flex h-full flex-col bg-white">
-      <div className="flex items-center gap-3 px-6 py-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
-          <Landmark className="h-5 w-5" />
-        </div>
-        <div>
-          <p className="text-lg font-bold leading-tight text-slate-900">Flip Funding</p>
-          <p className="text-xs text-slate-400">Premier Portfolio</p>
-        </div>
+      <div className="px-6 py-6">
+        <img src={logo} alt="Flip Funding" className="h-12 w-auto" />
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 pb-4">

@@ -1,4 +1,5 @@
-import { Landmark } from 'lucide-react'
+import logo from '../assets/flip-funding-logo.png'
+import logoLight from '../assets/flip-funding-logo-light.svg'
 
 export const authInputClass =
   'mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-emerald-600/30 placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2'
@@ -17,14 +18,8 @@ export default function AuthLayout({ children }) {
     <div className="flex min-h-screen bg-slate-50">
       <div className="relative hidden w-1/2 overflow-hidden bg-slate-900 lg:flex lg:flex-col lg:justify-between lg:p-12">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-700/40 via-slate-900 to-slate-950" />
-        <div className="relative flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
-            <Landmark className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-lg font-bold text-white">Flip Funding</p>
-            <p className="text-xs text-slate-400">Investor Client Portal</p>
-          </div>
+        <div className="relative">
+          <img src={logoLight} alt="Flip Funding" className="h-14 w-auto" />
         </div>
         <div className="relative max-w-md">
           <h1 className="text-3xl font-bold tracking-tight text-white">
@@ -39,14 +34,8 @@ export default function AuthLayout({ children }) {
 
       <div className="flex w-full flex-col justify-center px-6 py-12 lg:w-1/2 lg:px-16">
         <div className="mx-auto w-full max-w-md">
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
-              <Landmark className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-slate-900">Flip Funding</p>
-              <p className="text-xs text-slate-400">Client Portal</p>
-            </div>
+          <div className="mb-8 lg:hidden">
+            <img src={logo} alt="Flip Funding" className="h-12 w-auto" />
           </div>
 
           {children}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Mail, MessageSquare, Pencil, Phone, X } from 'lucide-react'
+import { ArrowLeft, Check, Copy, Mail, MessageSquare, Pencil, Phone, X } from 'lucide-react'
 import { fetchLoanPage } from '../../api/admin'
 import { fetchLoanChat } from '../../api/chats'
 import { useAuth } from '../../common/auth/AuthContext'
@@ -24,6 +24,38 @@ const sections = [
 ]
 
 const card = 'rounded-xl border border-slate-200 bg-white p-5 sm:p-6'
+
+// Copies text to the clipboard; shows a check for a moment once copied
+function CopyButton({ value, label }) {
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    if (!copied) return
+    const timer = setTimeout(() => setCopied(false), 1500)
+    return () => clearTimeout(timer)
+  }, [copied])
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+    } catch {
+      // Clipboard blocked (e.g. insecure context); nothing to do
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      aria-label={copied ? 'Copied' : `Copy ${label}`}
+      title={copied ? 'Copied' : `Copy ${label}`}
+      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+    >
+      {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+    </button>
+  )
+}
 
 function personName(user) {
   return user?.full_name?.trim() || user?.email || null
@@ -62,11 +94,19 @@ function LoanDetails({ loan }) {
               <DetailRow label="Name">{contact.contact_name || [contact.first_name, contact.last_name].filter(Boolean).join(' ')}</DetailRow>
               <DetailRow label="Company">{contact.company_name}</DetailRow>
               <DetailRow label="Email">
-                {contact.email && <a href={`mailto:${contact.email}`} className="text-emerald-700 hover:underline">{contact.email}</a>}
+                {contact.email && (
+                  <span className="inline-flex items-center gap-1">
+                    <a href={`mailto:${contact.email}`} className="text-emerald-700 hover:underline">{contact.email}</a>
+                    <CopyButton value={contact.email} label="email" />
+                  </span>
+                )}
               </DetailRow>
               <DetailRow label="Phone">
                 {contact.phone && (
-                  <a href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`} className="text-emerald-700 hover:underline">{contact.phone}</a>
+                  <span className="inline-flex items-center gap-1">
+                    <a href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`} className="text-emerald-700 hover:underline">{contact.phone}</a>
+                    <CopyButton value={contact.phone} label="phone" />
+                  </span>
                 )}
               </DetailRow>
               <DetailRow label="Website">{contact.website}</DetailRow>
@@ -150,19 +190,25 @@ function ContactCard({ person, label, badge }) {
         <p className="text-xs text-slate-400">{label}</p>
         <div className="mt-1.5 space-y-1 text-sm">
           {person.email && (
-            <a href={`mailto:${person.email}`} className="flex items-center gap-1.5 break-all text-emerald-700 hover:underline">
-              <Mail className="h-3.5 w-3.5 shrink-0" />
-              {person.email}
-            </a>
+            <div className="flex items-center gap-1">
+              <a href={`mailto:${person.email}`} className="flex min-w-0 items-center gap-1.5 break-all text-emerald-700 hover:underline">
+                <Mail className="h-3.5 w-3.5 shrink-0" />
+                {person.email}
+              </a>
+              <CopyButton value={person.email} label="email" />
+            </div>
           )}
           {person.phone && (
-            <a
-              href={`tel:${person.phone.replace(/[^\d+]/g, '')}`}
-              className="flex items-center gap-1.5 text-emerald-700 hover:underline"
-            >
-              <Phone className="h-3.5 w-3.5 shrink-0" />
-              {person.phone}
-            </a>
+            <div className="flex items-center gap-1">
+              <a
+                href={`tel:${person.phone.replace(/[^\d+]/g, '')}`}
+                className="flex items-center gap-1.5 text-emerald-700 hover:underline"
+              >
+                <Phone className="h-3.5 w-3.5 shrink-0" />
+                {person.phone}
+              </a>
+              <CopyButton value={person.phone} label="phone" />
+            </div>
           )}
         </div>
       </div>
