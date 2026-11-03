@@ -4,7 +4,6 @@ import {
   Landmark,
   StickyNote,
   Building2,
-  MessagesSquare,
   Users,
   Contact,
   FileStack,
@@ -19,7 +18,6 @@ export const adminNavSections = [
   { id: 'documentTypes', label: 'Document Types', icon: FileStack, path: '/admin/document-types' },
   { id: 'notes', label: 'Messages', icon: StickyNote, path: '/admin/notes' },
   { id: 'crm', label: 'CRM', icon: Building2, path: '/admin/crm' },
-  { id: 'communications', label: 'Email & SMS', icon: MessagesSquare, path: '/admin/communications' },
   { id: 'users', label: 'Team', icon: Users, path: '/admin/users' },
   { id: 'borrowers', label: 'Borrowers', icon: Contact, path: '/admin/borrowers' },
 ]
@@ -32,7 +30,6 @@ export const adminSectionSubtitles = {
   tasks: 'Uploads and draw requests on your loans that are waiting for your review.',
   notes: 'Client and internal messages, in one place.',
   crm: 'Sync status and deal data from the CRM.',
-  communications: 'Every email and text, in one place.',
   users: 'Manage staff accounts.',
   borrowers: 'Borrower logins created from converted loans.',
 }

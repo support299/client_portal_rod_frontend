@@ -1,14 +1,5 @@
-import { useState } from 'react'
-import { Bell, User } from 'lucide-react'
+import { User } from 'lucide-react'
 import { useAuth } from '../common/auth/AuthContext'
-
-// Local only for now: not saved, resets on reload
-const communicationPreferenceTemplate = [
-  { id: 1, label: 'Email Notifications', description: 'Loan updates, document requests, and messages', enabled: true },
-  { id: 2, label: 'SMS Alerts', description: 'Time-sensitive deadlines and draw approvals', enabled: true },
-  { id: 3, label: 'Draw Request Updates', description: 'Status changes on submitted draw requests', enabled: true },
-  { id: 4, label: 'Marketing & Promotions', description: 'New products, rate changes, referral offers', enabled: false },
-]
 
 function Card({ icon: Icon, title, children }) {
   return (
@@ -48,50 +39,10 @@ function BasicDetailsCard() {
   )
 }
 
-function CommunicationPreferencesCard() {
-  const [prefs, setPrefs] = useState(communicationPreferenceTemplate)
-
-  const toggle = (id) => {
-    setPrefs((prev) => prev.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p)))
-  }
-
-  return (
-    <Card icon={Bell} title="Communication Preferences">
-      <ul className="divide-y divide-slate-100">
-        {prefs.map((pref) => (
-          <li key={pref.id} className="flex items-center justify-between gap-4 py-3">
-            <div>
-              <p className="text-sm font-semibold text-slate-900">{pref.label}</p>
-              <p className="text-xs text-slate-400">{pref.description}</p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={pref.enabled}
-              aria-label={pref.label}
-              onClick={() => toggle(pref.id)}
-              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                pref.enabled ? 'bg-emerald-600' : 'bg-slate-200'
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                  pref.enabled ? 'translate-x-5' : 'translate-x-0.5'
-                }`}
-              />
-            </button>
-          </li>
-        ))}
-      </ul>
-    </Card>
-  )
-}
-
 export default function ProfileSection() {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <BasicDetailsCard />
-      <CommunicationPreferencesCard />
     </div>
   )
 }

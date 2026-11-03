@@ -15,7 +15,6 @@ import DocumentTypesSection from './components/admin/DocumentTypesSection'
 import MilestonesSection from './components/admin/MilestonesSection'
 import NotesSection from './components/admin/NotesSection'
 import CrmSection from './components/admin/CrmSection'
-import CommunicationsSection from './components/admin/CommunicationsSection'
 import UsersSection from './components/admin/UsersSection'
 import BorrowersSection from './components/admin/BorrowersSection'
 
@@ -55,7 +54,6 @@ function App() {
             <Route path="milestones" element={<MilestonesSection />} />
             <Route path="notes" element={<NotesSection />} />
             <Route path="crm" element={<CrmSection />} />
-            <Route path="communications" element={<CommunicationsSection />} />
             <Route path="users" element={<UsersSection />} />
             <Route path="borrowers" element={<BorrowersSection />} />
           </Route>
