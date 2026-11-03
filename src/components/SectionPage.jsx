@@ -63,14 +63,10 @@ function MyLoansSection({ onSelectLoan, properties = [] }) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 sm:gap-8">
+                <div className="grid grid-cols-2 gap-4 sm:gap-8">
                   <div>
-                    <p className="text-xs text-slate-400">Next Payment</p>
-                    <p className="text-sm font-medium text-slate-700">{loan.nextPaymentDate ?? '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-400">Total Due</p>
-                    <p className="text-sm font-medium text-slate-700">{loan.totalDue ?? '—'}</p>
+                    <p className="text-xs text-slate-400">Draw Amount</p>
+                    <p className="text-sm font-medium text-slate-700">{loan.loanAmount ?? '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-slate-400">Est. End Date</p>
