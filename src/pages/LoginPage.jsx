@@ -57,7 +57,7 @@ export default function LoginPage() {
     e.preventDefault()
     run(async () => {
       const data = await login({ email: email.trim(), password })
-      const dest = isStaffUser(data.user) ? '/admin' : from === '/login' ? '/' : from
+      const dest = isStaffUser(data.user) ? '/admin/tasks' : from === '/login' ? '/' : from
       navigate(dest, { replace: true })
     })
   }

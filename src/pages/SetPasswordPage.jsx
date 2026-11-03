@@ -52,7 +52,7 @@ export default function SetPasswordPage() {
     // Password saved: sign straight in
     try {
       const data = await login({ email: link.email, password })
-      navigate(isStaffUser(data.user) ? '/admin' : '/', { replace: true })
+      navigate(isStaffUser(data.user) ? '/admin/tasks' : '/', { replace: true })
     } catch {
       navigate('/login', { replace: true })
     }

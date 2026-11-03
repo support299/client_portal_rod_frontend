@@ -5,7 +5,6 @@ import LoginPage from './pages/LoginPage'
 import SetPasswordPage from './pages/SetPasswordPage'
 import Dashboard from './pages/Dashboard'
 import AdminLayout from './pages/AdminLayout'
-import AdminOverview from './components/admin/AdminOverview'
 import PipelineSection from './components/admin/PipelineSection'
 import LoansSection from './components/admin/LoansSection'
 import TasksSection from './components/admin/TasksSection'
@@ -44,7 +43,7 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<AdminOverview />} />
+            <Route index element={<Navigate to="tasks" replace />} />
             <Route path="pipeline" element={<PipelineSection />} />
             <Route path="loans" element={<LoansSection />} />
             <Route path="tasks" element={<TasksSection />} />

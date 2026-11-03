@@ -1,5 +1,4 @@
 import {
-  LayoutGrid,
   KanbanSquare,
   Landmark,
   StickyNote,
@@ -11,7 +10,6 @@ import {
 } from 'lucide-react'
 
 export const adminNavSections = [
-  { id: 'overview', label: 'Overview', icon: LayoutGrid, path: '/admin' },
   { id: 'tasks', label: 'Tasks', icon: ListChecks, path: '/admin/tasks' },
   { id: 'pipeline', label: 'Pipeline', icon: KanbanSquare, path: '/admin/pipeline' },
   { id: 'loans', label: 'Loans', icon: Landmark, path: '/admin/loans' },
@@ -23,7 +21,6 @@ export const adminNavSections = [
 ]
 
 export const adminSectionSubtitles = {
-  overview: 'Everything on your plate, at a glance.',
   pipeline: 'Every active deal, grouped by stage.',
   loans: 'Every loan converted from the pipeline.',
   documentTypes: 'The documents you collect from borrowers, and the checklist every new loan gets.',

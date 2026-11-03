@@ -22,7 +22,7 @@ export default function ProtectedRoute({ children, staffOnly = false, borrowerOn
   }
 
   if (borrowerOnly && isStaff) {
-    return <Navigate to="/admin" replace />
+    return <Navigate to="/admin/tasks" replace />
   }
 
   return children
