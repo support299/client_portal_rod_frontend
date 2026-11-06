@@ -57,7 +57,7 @@ function NotificationItem({ notification, onOpen }) {
 export default function NotificationBell() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const isBorrower = user?.role === 'borrower'
+  const isBorrower = user?.role === 'borrower' || user?.role === 'broker'
   const [open, setOpen] = useState(false)
   const [unread, setUnread] = useState(0)
   const [items, setItems] = useState([])

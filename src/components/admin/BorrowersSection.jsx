@@ -20,13 +20,13 @@ function errorMessage(err) {
 }
 
 // Borrowers are created by converting opportunities, so this only edits them; role is never sent
-function EditBorrowerModal({ borrower, onClose, onSaved }) {
+function EditBorrowerModal({ borrower, brokers, onClose, onSaved }) {
   const [form, setForm] = useState({
     first_name: borrower.first_name ?? '',
     last_name: borrower.last_name ?? '',
     email: borrower.email ?? '',
     phone: borrower.phone ?? '',
-    password: '',
+    broker: borrower.broker != null ? String(borrower.broker) : '',
     is_active: borrower.is_active ?? true,
   })
   const [saving, setSaving] = useState(false)
@@ -52,9 +52,9 @@ function EditBorrowerModal({ borrower, onClose, onSaved }) {
       last_name: form.last_name.trim(),
       email: form.email.trim(),
       phone: form.phone.trim(),
+      broker: form.broker ? Number(form.broker) : null,
       is_active: form.is_active,
     }
-    if (form.password) payload.password = form.password
 
     setSaving(true)
     setError('')
@@ -142,19 +142,25 @@ function EditBorrowerModal({ borrower, onClose, onSaved }) {
             />
           </div>
           <div>
-            <label htmlFor="borrower-password" className="text-xs font-medium text-slate-500">New Password</label>
-            <input
-              id="borrower-password"
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              value={form.password}
+            <label htmlFor="borrower-broker" className="text-xs font-medium text-slate-500">Broker</label>
+            <select
+              id="borrower-broker"
+              name="broker"
+              value={form.broker}
               onChange={handleChange}
-              placeholder="Leave blank to keep current password"
-              className={inputClass}
-            />
+              className={`${inputClass} bg-white`}
+            >
+              <option value="">No broker</option>
+              {/* Keep the current broker selectable even if deactivated (not in the active list) */}
+              {borrower.broker != null && !brokers.some((b) => b.id === borrower.broker) && (
+                <option value={borrower.broker}>{borrower.broker_name || `Broker #${borrower.broker}`}</option>
+              )}
+              {brokers.map((b) => (
+                <option key={b.id} value={b.id}>{b.full_name?.trim() || b.email}</option>
+              ))}
+            </select>
             <p className="mt-1 text-xs text-slate-400">
-              Borrowers created from a loan have no password until one is set here.
+              The broker sees and manages all of this borrower&apos;s loans.
             </p>
           </div>
           <label className="flex items-center gap-2 text-sm text-slate-600">
@@ -200,6 +206,8 @@ export default function BorrowersSection() {
   const [query, setQuery] = useState('')
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState('')
+  const [brokerFilter, setBrokerFilter] = useState('')
+  const [brokers, setBrokers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(null)
@@ -215,11 +223,22 @@ export default function BorrowersSection() {
     return () => clearTimeout(timer)
   }, [query])
 
+  // Active brokers, for the filter and the edit modal's dropdown
+  useEffect(() => {
+    let cancelled = false
+    fetchUsers({ role: 'broker', is_active: 'true', page_size: 100 })
+      .then((data) => !cancelled && setBrokers(data?.results ?? []))
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError('')
-    fetchUsers({ staff: 'false', search, is_active: activeFilter, page, page_size: PAGE_SIZE })
+    fetchUsers({ staff: 'false', search, is_active: activeFilter, broker: brokerFilter, page, page_size: PAGE_SIZE })
       .then((data) => {
         if (cancelled) return
         setBorrowers(data?.results ?? [])
@@ -230,7 +249,7 @@ export default function BorrowersSection() {
     return () => {
       cancelled = true
     }
-  }, [search, activeFilter, page])
+  }, [search, activeFilter, brokerFilter, page])
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
@@ -260,6 +279,22 @@ export default function BorrowersSection() {
           <option value="true">Active</option>
           <option value="false">Inactive</option>
         </select>
+        {brokers.length > 0 && (
+          <select
+            value={brokerFilter}
+            onChange={(e) => {
+              setBrokerFilter(e.target.value)
+              setPage(1)
+            }}
+            aria-label="Filter by broker"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-emerald-400 focus:outline-none"
+          >
+            <option value="">All brokers</option>
+            {brokers.map((b) => (
+              <option key={b.id} value={b.id}>{b.full_name?.trim() || b.email}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
@@ -283,6 +318,11 @@ export default function BorrowersSection() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                {borrower.broker_name?.trim() && (
+                  <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+                    {borrower.broker_name}
+                  </span>
+                )}
                 {borrower.loan_count > 0 ? (
                   <Link
                     to={`/admin/loans?search=${encodeURIComponent(borrower.email)}`}
@@ -343,6 +383,7 @@ export default function BorrowersSection() {
       {editing && (
         <EditBorrowerModal
           borrower={editing}
+          brokers={brokers}
           onClose={() => setEditing(null)}
           onSaved={(saved) => {
             setBorrowers((list) => list.map((b) => (b.id === saved.id ? saved : b)))

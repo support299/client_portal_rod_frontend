@@ -9,9 +9,13 @@ import {
 
 const AuthContext = createContext(null)
 
-// Every role except borrower is an internal team member who uses the admin portal
+// Internal team members use the admin portal; borrowers and brokers use the client portal
 export function isStaffUser(user) {
-  return Boolean(user?.role) && user.role !== 'borrower'
+  return Boolean(user?.role) && user.role !== 'borrower' && user.role !== 'broker'
+}
+
+export function isBrokerUser(user) {
+  return user?.role === 'broker'
 }
 
 export function AuthProvider({ children }) {
@@ -65,6 +69,7 @@ export function AuthProvider({ children }) {
       user,
       isAuthenticated: Boolean(user),
       isStaff: isStaffUser(user),
+      isBroker: isBrokerUser(user),
       bootstrapping,
       login,
       logout,

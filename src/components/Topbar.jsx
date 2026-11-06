@@ -1,7 +1,33 @@
 import { Link } from 'react-router-dom'
-import { Settings, Menu, ShieldCheck, LogOut } from 'lucide-react'
+import { Settings, Menu, ShieldCheck, LogOut, UserRound } from 'lucide-react'
 import { useAuth } from '../common/auth/AuthContext'
 import NotificationBell from './NotificationBell'
+
+// Shown to brokers on every portal page: which client's account they're viewing
+function ClientPicker({ clients, selectedClient, onSelectClient }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
+        <UserRound className="h-4 w-4" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Viewing client</p>
+        <select
+          value={selectedClient?.id ?? ''}
+          onChange={(e) => onSelectClient(e.target.value)}
+          aria-label="Viewing client"
+          className="-ml-1 w-full max-w-[14rem] truncate rounded-md bg-transparent px-1 py-0.5 text-sm font-semibold text-slate-900 hover:bg-slate-100 focus:outline-none"
+        >
+          {clients.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.full_name?.trim() || c.email}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  )
+}
 
 function UserAvatar({ name, avatar, className }) {
   if (avatar) {
@@ -18,7 +44,7 @@ function UserAvatar({ name, avatar, className }) {
   )
 }
 
-export default function Topbar({ onMenuClick }) {
+export default function Topbar({ onMenuClick, clients, selectedClient, onSelectClient }) {
   const { user, isStaff, logout } = useAuth()
   const name = user?.full_name || user?.email || ''
   const avatar = user?.avatar_url || ''
@@ -29,12 +55,14 @@ export default function Topbar({ onMenuClick }) {
         type="button"
         onClick={onMenuClick}
         aria-label="Open menu"
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 lg:hidden"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 lg:hidden"
       >
         <Menu className="h-5 w-5" />
       </button>
 
-      {isStaff ? (
+      {clients?.length > 0 ? (
+        <ClientPicker clients={clients} selectedClient={selectedClient} onSelectClient={onSelectClient} />
+      ) : isStaff ? (
         <Link
           to="/admin/tasks"
           className="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-700 lg:flex"

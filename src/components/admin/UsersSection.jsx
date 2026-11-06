@@ -15,6 +15,7 @@ const userRoles = [
   { value: 'closer', label: 'Closer' },
   { value: 'draw_specialist', label: 'Draw Specialist' },
   { value: 'accounting', label: 'Accounting' },
+  { value: 'broker', label: 'Broker' },
   { value: 'admin', label: 'Admin' },
 ]
 
@@ -24,7 +25,6 @@ const emptyForm = {
   email: '',
   phone: '',
   role: userRoles[0].value,
-  password: '',
   is_active: true,
 }
 
@@ -220,7 +220,6 @@ export default function UsersSection() {
       email: user.email ?? '',
       phone: user.phone ?? '',
       role: user.role,
-      password: '',
       is_active: user.is_active ?? true,
     })
     setCrmUser(null)
@@ -255,8 +254,6 @@ export default function UsersSection() {
       role: form.role,
       is_active: form.is_active,
     }
-    // New users set their password from an emailed link; on edit it's only sent when changed
-    if (isEditing && form.password) payload.password = form.password
 
     setSaving(true)
     setFormError('')
@@ -501,24 +498,7 @@ export default function UsersSection() {
                   ))}
                 </select>
               </div>
-              {/* New users set their own password from the emailed link on first sign-in */}
-              {isEditing && (
-                <div>
-                  <label htmlFor="password" className="text-xs font-medium text-slate-500">
-                    New Password
-                  </label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    value={form.password}
-                    onChange={handleChange}
-                    placeholder="Leave blank to keep current password"
-                    className={inputClass}
-                  />
-                </div>
-              )}
+              {/* Users set their own password from the emailed link; admins can't change it here */}
               {isEditing && (
                 <label className="flex items-center gap-2 text-sm text-slate-600">
                   <input

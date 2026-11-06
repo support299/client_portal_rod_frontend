@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../common/auth/AuthContext'
 import { navSections } from '../common/constants/nav'
@@ -18,39 +18,84 @@ import { ChevronRight, Plus } from 'lucide-react'
 const knownSections = new Set([...navSections.map((s) => s.id), 'conditions', 'deal-timeline', 'my-team'])
 
 export default function Dashboard() {
-  const { user } = useAuth()
+  const { user, isBroker } = useAuth()
   const welcomeName = user?.full_name?.trim()
-  const { loans, loading: loansLoading, error: loansError } = useMyLoans()
+  const { loans: allLoans, loading: loansLoading, error: loansError } = useMyLoans()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   // The section and the selected loan live in the URL (/documents?loan=12), so back/forward,
-  // refresh and shared links all work
+  // refresh and shared links all work. For brokers the selected client is there too (?client=5).
   const { section } = useParams()
   const activeSection = section || 'dashboard'
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const loanParam = searchParams.get('loan')
+  const clientParam = searchParams.get('client')
+
+  // A broker's clients, from their visible loans (each carries its borrower)
+  const clients = useMemo(() => {
+    if (!isBroker) return []
+    const byId = new Map()
+    for (const loan of allLoans) {
+      const client = loan.raw?.borrower
+      if (client && !byId.has(client.id)) byId.set(client.id, client)
+    }
+    return [...byId.values()].sort((a, b) =>
+      (a.full_name?.trim() || a.email).localeCompare(b.full_name?.trim() || b.email),
+    )
+  }, [isBroker, allLoans])
+
+  // The client being viewed: the loan in the URL decides (so notification links land right),
+  // else the client in the URL, else the first one
+  const loanInUrl = allLoans.find((l) => String(l.id) === loanParam)
+  const selectedClient = isBroker
+    ? (loanInUrl?.raw?.borrower && clients.find((c) => c.id === loanInUrl.raw.borrower.id)) ||
+      clients.find((c) => String(c.id) === clientParam) ||
+      clients[0] ||
+      null
+    : null
+  const loans = isBroker ? allLoans.filter((l) => l.raw?.borrower?.id === selectedClient?.id) : allLoans
+  const clientName = selectedClient ? selectedClient.full_name?.trim() || selectedClient.email : ''
+
   // The loan in the URL, else the first one (also when the URL names a loan that isn't theirs)
   const selectedProperty = loans.find((l) => String(l.id) === loanParam) || loans[0] || null
   const selectedId = selectedProperty?.id
+
+  const urlSearch = useCallback(
+    (loanId, clientId = selectedClient?.id) => {
+      const params = new URLSearchParams()
+      if (isBroker && clientId != null) params.set('client', clientId)
+      if (loanId != null) params.set('loan', loanId)
+      return params.toString()
+    },
+    [isBroker, selectedClient?.id],
+  )
 
   // Go to a section, keeping the selected loan (or switching to loanId)
   const setActiveSection = useCallback(
     (id, loanId = selectedId) => {
       navigate({
         pathname: id === 'dashboard' ? '/' : `/${id}`,
-        search: loanId != null ? `?loan=${loanId}` : '',
+        search: urlSearch(loanId),
       })
     },
-    [navigate, selectedId],
+    [navigate, selectedId, urlSearch],
   )
 
   // Switching loans within a section replaces the history entry rather than adding one
   const setSelectedProperty = useCallback(
     (property) => {
-      setSearchParams(property ? { loan: String(property.id) } : {}, { replace: true })
+      navigate({ search: urlSearch(property?.id) }, { replace: true })
     },
-    [setSearchParams],
+    [navigate, urlSearch],
+  )
+
+  // Switching clients starts from that client's first loan
+  const setSelectedClient = useCallback(
+    (clientId) => {
+      navigate({ search: urlSearch(null, clientId) }, { replace: true })
+    },
+    [navigate, urlSearch],
   )
 
   const { detail, loading: detailLoading, error: detailError, reload: reloadDetail } = useLoanDetail(selectedProperty)
@@ -73,7 +118,12 @@ export default function Dashboard() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar onMenuClick={() => setSidebarOpen(true)} />
+        <Topbar
+          onMenuClick={() => setSidebarOpen(true)}
+          clients={isBroker ? clients : undefined}
+          selectedClient={selectedClient}
+          onSelectClient={setSelectedClient}
+        />
 
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
           {activeSection === 'dashboard' ? (
@@ -96,9 +146,11 @@ export default function Dashboard() {
                   Welcome back{welcomeName ? `, ${welcomeName}` : ''}
                 </h1>
                 <p className="mt-1 text-sm text-slate-500">
-                  {loans.length > 1
-                    ? `You have ${loans.length} deals with us. Pick one to see where it stands.`
-                    : 'Here’s where your loan stands and what comes next.'}
+                  {isBroker
+                    ? `${clientName} has ${loans.length} deal${loans.length === 1 ? '' : 's'} with us.${loans.length > 1 ? ' Pick one to see where it stands.' : ''}`
+                    : loans.length > 1
+                      ? `You have ${loans.length} deals with us. Pick one to see where it stands.`
+                      : 'Here’s where your loan stands and what comes next.'}
                 </p>
 
                 {loans.length > 1 && (
@@ -173,10 +225,13 @@ export default function Dashboard() {
                   Welcome back{welcomeName ? `, ${welcomeName}` : ''}
                 </h1>
                 <div className="mt-8 flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-24 text-center">
-                  <p className="text-lg font-semibold text-slate-900">No loans yet</p>
+                  <p className="text-lg font-semibold text-slate-900">
+                    {isBroker ? 'No clients yet' : 'No loans yet'}
+                  </p>
                   <p className="mt-2 max-w-sm text-sm text-slate-500">
-                    Sign in with the same email used on your loan application. When a matching
-                    Quick App / opportunity exists, it will show here.
+                    {isBroker
+                      ? 'Your clients and their loans will show here once the team links borrowers to you.'
+                      : 'Sign in with the same email used on your loan application. When a matching Quick App / opportunity exists, it will show here.'}
                   </p>
                 </div>
               </div>

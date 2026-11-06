@@ -47,6 +47,7 @@ export const userRoleStyles = {
   closer: 'bg-purple-100 text-purple-700',
   draw_specialist: 'bg-amber-100 text-amber-800',
   accounting: 'bg-cyan-100 text-cyan-700',
+  broker: 'bg-indigo-100 text-indigo-700',
   admin: 'bg-red-100 text-red-700',
 }
 
