@@ -56,6 +56,26 @@ export async function fetchTasks(scope = 'mine') {
   return apiRequest(`/api/loans/tasks/?scope=${scope}`)
 }
 
+// Manual staff to-dos; they show up in fetchTasks as type "manual"
+export async function createStaffTask(payload) {
+  return apiRequest('/api/loans/tasks/manual/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+// payload may include completed: true/false to mark done or reopen
+export async function updateStaffTask(id, payload) {
+  return apiRequest(`/api/loans/tasks/manual/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function deleteStaffTask(id) {
+  return apiRequest(`/api/loans/tasks/manual/${id}/`, { method: 'DELETE' })
+}
+
 // The loan pipeline's stages in order; a loan's status is one of these ids
 export async function fetchLoanStages() {
   return apiRequest('/api/loans/stages/')

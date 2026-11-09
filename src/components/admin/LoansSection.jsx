@@ -138,6 +138,7 @@ function formFromLoan(loan) {
     opportunity_status: loan.opportunity_status ?? '',
     pipeline_stage_id: loan.pipeline_stage_id ?? '',
     expected_close_date: loan.expected_close_date ?? '',
+    source: loan.source ?? '',
     lost_reason_id: loan.lost_reason_id ?? '',
     loan_officers: officersOf(loan).map((u) => String(u.id)).sort(),
     // The main team member is the opportunity's assigned user in GHL
@@ -150,6 +151,7 @@ export function EditLoanForm({ loan, stages, canReassign, onCancel, onSaved, onS
   const [original] = useState(() => formFromLoan(loan))
   const [form, setForm] = useState(original)
   const [statuses, setStatuses] = useState([])
+  const [sources, setSources] = useState([])
   const [officers, setOfficers] = useState([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -162,6 +164,7 @@ export function EditLoanForm({ loan, stages, canReassign, onCancel, onSaved, onS
       .then((data) => {
         if (cancelled) return
         setStatuses(data?.statuses ?? [])
+        setSources(data?.sources ?? [])
       })
       .catch(() => !cancelled && setError('Could not load status options.'))
     return () => {
@@ -221,6 +224,7 @@ export function EditLoanForm({ loan, stages, canReassign, onCancel, onSaved, onS
     opportunity_status: ['Opportunity status', (v) => statuses.find((s) => s.value === v)?.label ?? (v || '—')],
     pipeline_stage_id: ['Stage', (v) => stages.find((s) => s.id === v)?.name ?? (v || '—')],
     expected_close_date: ['Expected close', (v) => formatDate(v) || 'Not set'],
+    source: ['Lead source', (v) => v || '—'],
     lost_reason_id: ['Lost reason ID', (v) => v || '—'],
     loan_officers: ['Team', officersLabel],
     main_officer: ['Main (assigned in GHL)', (v) => (v ? personLabel(v) : 'None')],
@@ -247,6 +251,7 @@ export function EditLoanForm({ loan, stages, canReassign, onCancel, onSaved, onS
     if (changed('opportunity_status')) opportunityPayload.status = form.opportunity_status
     if (changed('pipeline_stage_id')) opportunityPayload.pipeline_stage_id = form.pipeline_stage_id
     if (changed('expected_close_date')) opportunityPayload.expected_close_date = form.expected_close_date || null
+    if (changed('source')) opportunityPayload.source = form.source.trim()
     if (changed('lost_reason_id')) opportunityPayload.lost_reason_id = form.lost_reason_id
     const loanPayload = {}
     if (changed('loan_officers')) loanPayload.loan_officers = form.loan_officers.map(Number)
@@ -370,9 +375,28 @@ export function EditLoanForm({ loan, stages, canReassign, onCancel, onSaved, onS
           />
         </div>
       </div>
-      <div>
-        <label htmlFor="loan-lost" className="text-xs font-medium text-slate-500">Lost Reason ID</label>
-        <input id="loan-lost" name="lost_reason_id" value={form.lost_reason_id} onChange={handleChange} className={inputClass} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="loan-source" className="text-xs font-medium text-slate-500">Lead Source</label>
+          <input
+            id="loan-source"
+            name="source"
+            list="loan-sources"
+            value={form.source}
+            onChange={handleChange}
+            placeholder="Pick one or type a new source"
+            className={inputClass}
+          />
+          <datalist id="loan-sources">
+            {sources.map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
+        </div>
+        <div>
+          <label htmlFor="loan-lost" className="text-xs font-medium text-slate-500">Lost Reason ID</label>
+          <input id="loan-lost" name="lost_reason_id" value={form.lost_reason_id} onChange={handleChange} className={inputClass} />
+        </div>
       </div>
       {canReassign ? (
         <fieldset className="rounded-lg border border-slate-200 p-4">
