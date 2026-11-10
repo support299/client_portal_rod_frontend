@@ -76,6 +76,17 @@ export async function deleteStaffTask(id) {
   return apiRequest(`/api/loans/tasks/manual/${id}/`, { method: 'DELETE' })
 }
 
+// Loan-based report KPIs: { total, by_stage, by_status, by_source, by_officer, draws }.
+// Filters (all optional): start, end, officer, source, status, stage
+export async function fetchLoanReport(params = {}) {
+  return apiRequest(`/api/reports/loans/summary/?${queryString(params)}`)
+}
+
+// The same loans as a CSV Blob (openBlob saves it)
+export async function exportLoanReport(params = {}) {
+  return apiRequest(`/api/reports/loans/export/?${queryString(params)}`, { responseType: 'blob' })
+}
+
 // The loan pipeline's stages in order; a loan's status is one of these ids
 export async function fetchLoanStages() {
   return apiRequest('/api/loans/stages/')

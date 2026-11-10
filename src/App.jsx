@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import AdminLayout from './pages/AdminLayout'
 import PipelineSection from './components/admin/PipelineSection'
 import LoansSection from './components/admin/LoansSection'
+import ReportsSection from './components/admin/ReportsSection'
 import TasksSection from './components/admin/TasksSection'
 import LoanPage from './components/admin/LoanPage'
 import DocumentsSection from './components/admin/DocumentsSection'
@@ -46,6 +47,7 @@ function App() {
             <Route index element={<Navigate to="tasks" replace />} />
             <Route path="pipeline" element={<PipelineSection />} />
             <Route path="loans" element={<LoansSection />} />
+            <Route path="reports" element={<ReportsSection />} />
             <Route path="tasks" element={<TasksSection />} />
             <Route path="loans/:loanId" element={<LoanPage />} />
             <Route path="documents" element={<DocumentsSection />} />
