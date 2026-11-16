@@ -116,7 +116,8 @@ function LoanPicker({ value, onChange }) {
   )
 }
 
-function TaskModal({ task, onClose, onSaved }) {
+// Also opened from the loan page with initialLoan preselected (see LoanPage)
+export function TaskModal({ task, initialLoan = null, onClose, onSaved }) {
   const { user } = useAuth()
   const [form, setForm] = useState({
     title: task?.title ?? '',
@@ -124,7 +125,7 @@ function TaskModal({ task, onClose, onSaved }) {
     due_date: task?.due_date ?? '',
     assigned_to_id: task?.assigned_to?.id ?? user?.id ?? '',
   })
-  const [loan, setLoan] = useState(task?.loan ?? null)
+  const [loan, setLoan] = useState(task?.loan ?? initialLoan)
   const [staff, setStaff] = useState([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')

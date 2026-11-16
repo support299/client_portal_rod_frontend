@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Check, Copy, Mail, MessageSquare, Pencil, Phone, X } from 'lucide-react'
+import { ArrowLeft, Check, ClipboardList, Copy, Mail, MessageSquare, Pencil, Phone, X } from 'lucide-react'
 import { fetchLoanPage } from '../../api/admin'
 import { fetchLoanChat } from '../../api/chats'
 import { useAuth } from '../../common/auth/AuthContext'
@@ -12,6 +12,7 @@ import LoanDocuments from './LoanDocuments'
 import LoanDraws from './LoanDraws'
 import LoanNotes from './LoanNotes'
 import { EditLoanForm, StatusBadge } from './LoansSection'
+import { TaskModal } from './TasksSection'
 
 // In-page sections, in order; /admin/loans/12#draws scrolls to one
 const sections = [
@@ -241,6 +242,7 @@ export default function LoanPage() {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [chatError, setChatError] = useState('')
+  const [creatingTask, setCreatingTask] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -326,6 +328,14 @@ export default function LoanPage() {
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCreatingTask(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+            >
+              <ClipboardList className="h-3.5 w-3.5" />
+              New task
+            </button>
             <button
               type="button"
               onClick={openChat}
@@ -441,6 +451,14 @@ export default function LoanPage() {
           </Section>
         </div>
       </div>
+
+      {creatingTask && (
+        <TaskModal
+          initialLoan={{ id: loan.id, name: loan.name || `Loan #${loan.id}` }}
+          onClose={() => setCreatingTask(false)}
+          onSaved={() => setCreatingTask(false)}
+        />
+      )}
     </div>
   )
 }

@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
-import { Settings, Menu, ShieldCheck, LogOut, UserRound } from 'lucide-react'
+import { Settings, Menu, ShieldCheck, UserRound } from 'lucide-react'
 import { useAuth } from '../common/auth/AuthContext'
 import NotificationBell from './NotificationBell'
+import UserMenu from './UserMenu'
 
 // Shown to brokers on every portal page: which client's account they're viewing
 function ClientPicker({ clients, selectedClient, onSelectClient }) {
@@ -29,25 +30,8 @@ function ClientPicker({ clients, selectedClient, onSelectClient }) {
   )
 }
 
-function UserAvatar({ name, avatar, className }) {
-  if (avatar) {
-    return <img src={avatar} alt={name || 'User'} className={className} />
-  }
-  const initial = name?.trim()?.charAt(0)?.toUpperCase() ?? ''
-  return (
-    <div
-      className={`flex items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600 ${className}`}
-      aria-hidden={!initial}
-    >
-      {initial || '·'}
-    </div>
-  )
-}
-
 export default function Topbar({ onMenuClick, clients, selectedClient, onSelectClient }) {
-  const { user, isStaff, logout } = useAuth()
-  const name = user?.full_name || user?.email || ''
-  const avatar = user?.avatar_url || ''
+  const { isStaff } = useAuth()
 
   return (
     <header className="flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 py-3 sm:px-6 lg:px-8">
@@ -85,17 +69,7 @@ export default function Topbar({ onMenuClick, clients, selectedClient, onSelectC
           <Settings className="h-5 w-5" />
         </button>
 
-        <button
-          type="button"
-          aria-label="Sign out"
-          onClick={() => logout()}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
-          title="Sign out"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
-
-        <UserAvatar name={name} avatar={avatar} className="h-9 w-9 object-cover" />
+        <UserMenu />
       </div>
     </header>
   )
