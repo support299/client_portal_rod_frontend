@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
+  Check,
+  Copy,
   FilePlus2,
   FileText,
   Landmark,
@@ -123,6 +125,42 @@ function chatSubtitle(chat, isStaff) {
   }
   if (chat.kind === 'group') return `${chat.members.length} members`
   return chat.members.map((m) => m.email).join(', ')
+}
+
+// The borrower's email with a copy button; clicking the text copies it too
+function CopyableEmail({ email, prefix }) {
+  const [copied, setCopied] = useState(false)
+  const timer = useRef(null)
+
+  useEffect(() => () => clearTimeout(timer.current), [])
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(email)
+    } catch {
+      return
+    }
+    setCopied(true)
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1">
+      {prefix && <span className="truncate">{prefix} · </span>}
+      <button
+        type="button"
+        onClick={copy}
+        title="Copy email"
+        aria-label={`Copy ${email}`}
+        className="inline-flex min-w-0 items-center gap-1 rounded text-slate-500 hover:text-emerald-700 focus:outline-none focus-visible:underline"
+      >
+        <span className="truncate">{email}</span>
+        {copied ? <Check className="h-3 w-3 shrink-0 text-emerald-600" /> : <Copy className="h-3 w-3 shrink-0" />}
+      </button>
+      {copied && <span className="shrink-0 text-emerald-600">Copied</span>}
+    </span>
+  )
 }
 
 // Insert or replace a chat row and keep newest activity first, empty chats last
@@ -646,7 +684,13 @@ function ChatThread({
         <Avatar kind={chat.kind} className="h-9 w-9" />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-base font-semibold text-slate-900">{chat.title || 'Chat'}</h2>
-          <p className="truncate select-all text-xs text-slate-400">{chatSubtitle(chat, isStaff)}</p>
+          {isStaff && chat.kind === 'loan' && chat.borrower?.email ? (
+            <p className="flex min-w-0 text-xs text-slate-400">
+              <CopyableEmail email={chat.borrower.email} prefix={chat.borrower.full_name?.trim()} />
+            </p>
+          ) : (
+            <p className="truncate select-all text-xs text-slate-400">{chatSubtitle(chat, isStaff)}</p>
+          )}
         </div>
         {isStaff && chat.kind === 'loan' && (
           <button

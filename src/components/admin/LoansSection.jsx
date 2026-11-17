@@ -19,6 +19,17 @@ import LoanDraws from './LoanDraws'
 
 const PAGE_SIZE = 25
 
+// The deal's GHL status; by default lost and abandoned deals stay out of the list
+const DEAL_STATUS_OPTIONS = [
+  { value: 'open,won', label: 'Active (open & won)' },
+  { value: 'open', label: 'Open' },
+  { value: 'won', label: 'Won' },
+  { value: 'lost', label: 'Lost' },
+  { value: 'abandoned', label: 'Abandoned' },
+  { value: 'all', label: 'All deals' },
+]
+const DEFAULT_DEAL_STATUS = DEAL_STATUS_OPTIONS[0].value
+
 function personName(user) {
   return user?.full_name?.trim() || user?.email || null
 }
@@ -658,6 +669,9 @@ export default function LoansSection() {
   const [query, setQuery] = useState(initialSearch)
   const [search, setSearch] = useState(initialSearch)
   const [status, setStatus] = useState('')
+  const [dealStatus, setDealStatus] = useState(DEFAULT_DEAL_STATUS)
+  const [officer, setOfficer] = useState('')
+  const [staff, setStaff] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedId, setSelectedId] = useState(null)
@@ -687,6 +701,18 @@ export default function LoansSection() {
       .catch(() => setStages([]))
   }, [])
 
+  // Team members for the assigned-user filter; staff who only see their own loans don't need it
+  useEffect(() => {
+    if (!canReassign) return
+    let cancelled = false
+    fetchUsers({ is_active: 'true', page_size: 100 })
+      .then((data) => !cancelled && setStaff((data?.results ?? []).filter((u) => u.role !== 'borrower')))
+      .catch(() => !cancelled && setStaff([]))
+    return () => {
+      cancelled = true
+    }
+  }, [canReassign])
+
   // Debounce the search box; a new search starts from the first page
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -700,7 +726,14 @@ export default function LoansSection() {
     let cancelled = false
     setLoading(true)
     setError('')
-    fetchLoans({ search, status, page, page_size: PAGE_SIZE })
+    fetchLoans({
+      search,
+      status,
+      opportunity_status: dealStatus === 'all' ? '' : dealStatus,
+      loan_officer: officer,
+      page,
+      page_size: PAGE_SIZE,
+    })
       .then((data) => {
         if (cancelled) return
         setLoans(data?.results ?? [])
@@ -711,7 +744,7 @@ export default function LoansSection() {
     return () => {
       cancelled = true
     }
-  }, [search, status, page])
+  }, [search, status, dealStatus, officer, page])
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
@@ -740,6 +773,38 @@ export default function LoansSection() {
             <option key={id} value={id}>{name}</option>
           ))}
         </select>
+        <select
+          value={dealStatus}
+          onChange={(e) => {
+            setDealStatus(e.target.value)
+            setPage(1)
+          }}
+          aria-label="Filter by deal status"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-emerald-400 focus:outline-none"
+        >
+          {DEAL_STATUS_OPTIONS.map(({ value, label }) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </select>
+        {canReassign && (
+          <select
+            value={officer}
+            onChange={(e) => {
+              setOfficer(e.target.value)
+              setPage(1)
+            }}
+            aria-label="Filter by assigned team member"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-emerald-400 focus:outline-none"
+          >
+            <option value="">All team members</option>
+            {staff.map((u) => (
+              <option key={u.id} value={u.id}>
+                {personName(u)}
+                {u.role_label ? ` (${u.role_label})` : ''}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
@@ -748,9 +813,9 @@ export default function LoansSection() {
         <p className="mt-4 text-sm text-slate-500">Loading loans…</p>
       ) : loans.length === 0 ? (
         <p className="mt-4 text-sm text-slate-500">
-          {search || status
+          {search || status || officer || dealStatus !== DEFAULT_DEAL_STATUS
             ? 'No loans match these filters.'
-            : 'No loans yet. Convert an opportunity from the Pipeline to create one.'}
+            : 'No active loans. Convert an opportunity from the Pipeline to create one, or choose "All deals" to include lost and abandoned ones.'}
         </p>
       ) : (
         <div className={`-mx-5 mt-4 overflow-x-auto sm:-mx-6 ${loading ? 'opacity-60' : ''}`}>
