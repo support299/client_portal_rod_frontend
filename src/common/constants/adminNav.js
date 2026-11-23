@@ -19,7 +19,7 @@ export const adminNavSections = [
   { id: 'loans', label: 'Loans', icon: Landmark, path: '/admin/loans' },
   { id: 'accessRequests', label: 'Access requests', icon: KeyRound, path: '/admin/access-requests' },
   { id: 'reports', label: 'Reports', icon: BarChart3, path: '/admin/reports' },
-  { id: 'documentTypes', label: 'Document Types', icon: FileStack, path: '/admin/document-types' },
+  { id: 'documentTypes', label: 'Document Types', icon: FileStack, path: '/admin/document-types', inSidebar: false },
   { id: 'notes', label: 'Messages', icon: StickyNote, path: '/admin/notes' },
   { id: 'crm', label: 'CRM', icon: Building2, path: '/admin/crm' },
   { id: 'users', label: 'Team', icon: Users, path: '/admin/users' },

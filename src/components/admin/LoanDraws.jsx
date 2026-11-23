@@ -171,7 +171,6 @@ function StatusForm({ loanId, draw, initialStatus, onDone }) {
   const [status, setStatus] = useState(initialStatus ?? draw.allowed_statuses[0])
   const [note, setNote] = useState('')
   const [amountApproved, setAmountApproved] = useState(draw.amount_approved ?? draw.amount_requested)
-  const [fundingReference, setFundingReference] = useState(draw.funding_reference)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -184,7 +183,6 @@ function StatusForm({ loanId, draw, initialStatus, onDone }) {
         status,
         note: note.trim(),
         ...(status === 'approved' && { amount_approved: amountApproved }),
-        ...(status === 'funded' && { funding_reference: fundingReference.trim() }),
       })
       await onDone()
     } catch (err) {
@@ -226,17 +224,6 @@ function StatusForm({ loanId, draw, initialStatus, onDone }) {
             />
           </div>
         )}
-        {status === 'funded' && (
-          <div>
-            <label htmlFor={`draw-ref-${draw.id}`} className="text-xs font-medium text-slate-500">Wire / ACH reference</label>
-            <input
-              id={`draw-ref-${draw.id}`}
-              value={fundingReference}
-              onChange={(e) => setFundingReference(e.target.value)}
-              className={inputClass}
-            />
-          </div>
-        )}
       </div>
       <div>
         <label htmlFor={`draw-note-${draw.id}`} className="text-xs font-medium text-slate-500">
@@ -268,9 +255,6 @@ function StatusForm({ loanId, draw, initialStatus, onDone }) {
 const detailFields = [
   ['amount_requested', 'Requested amount ($)', 'number'],
   ['amount_approved', 'Approved amount ($)', 'number'],
-  ['inspector', 'Inspector', 'text'],
-  ['inspection_date', 'Inspection date', 'date'],
-  ['funding_reference', 'Wire / ACH reference', 'text'],
 ]
 
 function DetailsForm({ loanId, draw, onDone }) {
@@ -282,11 +266,11 @@ function DetailsForm({ loanId, draw, onDone }) {
 
   async function submit(e) {
     e.preventDefault()
-    // Send only what changed; empty number/date fields are cleared
+    // Send only what changed; an emptied approved amount is cleared
     const payload = Object.fromEntries(
       Object.entries(form)
         .filter(([key, value]) => String(value) !== String(draw[key] ?? ''))
-        .map(([key, value]) => [key, value === '' && ['amount_approved', 'inspection_date'].includes(key) ? null : value]),
+        .map(([key, value]) => [key, value === '' && key === 'amount_approved' ? null : value]),
     )
     setSaving(true)
     setError('')
@@ -471,11 +455,7 @@ function DrawRow({ loanId, draw, isAdmin, readOnly, expanded, onExpandedChange, 
     ...(isAdmin ? [{ label: 'Delete draw', danger: true, disabled: busy, onSelect: remove }] : []),
   ]
 
-  const facts = [
-    ['Approved', money(draw.amount_approved)],
-    ['Inspection', [formatDate(draw.inspection_date), draw.inspector].filter(Boolean).join(' · ') || '—'],
-    ['Funding ref.', draw.funding_reference || '—'],
-  ]
+  const facts = [['Approved', money(draw.amount_approved)]]
 
   return (
     <li

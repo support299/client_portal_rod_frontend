@@ -18,13 +18,12 @@ export async function createDraw(loanId, payload) {
   return apiRequest(`/api/loans/${loanId}/draws/`, { method: 'POST', body: JSON.stringify(payload) })
 }
 
-// Borrowers: amount_requested, borrower_comment. Staff also: amount_approved, staff_note,
-// inspector, inspection_date, funding_reference
+// Borrowers: amount_requested, borrower_comment. Staff also: amount_approved, staff_note
 export async function updateDraw(loanId, id, payload) {
   return apiRequest(`/api/loans/${loanId}/draws/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) })
 }
 
-// payload: status, note, and (staff) amount_approved, funding_reference
+// payload: status, note, and (staff) amount_approved
 export async function changeDrawStatus(loanId, id, payload) {
   return apiRequest(`/api/loans/${loanId}/draws/${id}/status/`, { method: 'POST', body: JSON.stringify(payload) })
 }
