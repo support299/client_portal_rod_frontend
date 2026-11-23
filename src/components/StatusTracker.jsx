@@ -49,7 +49,7 @@ export default function StatusTracker({ detail }) {
     <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Loan #{loan.id}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{loan.loanNumber || `Loan #${loan.id}`}</p>
           <h2 className="mt-0.5 text-xl font-bold text-slate-900">{loan.loanName}</h2>
         </div>
         {stageLabel && (

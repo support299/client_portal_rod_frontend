@@ -76,6 +76,49 @@ export async function deleteStaffTask(id) {
   return apiRequest(`/api/loans/tasks/manual/${id}/`, { method: 'DELETE' })
 }
 
+// Every loan, seen or not, so staff can find one to ask access for. Rows carry has_access,
+// access_level (officer / write / read / null) and pending_request (your open request's id)
+export async function searchLoansForAccess(search, pageSize = 8) {
+  return apiRequest(`/api/loans/search/?${queryString({ search, page_size: pageSize })}`)
+}
+
+// Access requests you asked for or may decide (admins: all). params: status, mine ('true')
+export async function fetchAccessRequests(params = {}) {
+  return apiRequest(`/api/loans/access-requests/?${queryString(params)}`)
+}
+
+// level: 'read' (default) or 'write'
+export async function createAccessRequest({ loan, level = 'read', message = '' }) {
+  return apiRequest('/api/loans/access-requests/', {
+    method: 'POST',
+    body: JSON.stringify({ loan, level, message }),
+  })
+}
+
+// decision: 'approve' | 'deny'; level overrides the requested level when approving
+export async function decideAccessRequest(id, decision, { level, note = '' } = {}) {
+  return apiRequest(`/api/loans/access-requests/${id}/decide/`, {
+    method: 'POST',
+    body: JSON.stringify({ decision, note, ...(level ? { level } : {}) }),
+  })
+}
+
+// Change what an approved grant allows: 'read' or 'write'
+export async function setAccessLevel(id, level) {
+  return apiRequest(`/api/loans/access-requests/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify({ level }),
+  })
+}
+
+// Cancels a pending request (the requester) or revokes an approved grant (officers/admins)
+export async function deleteAccessRequest(id, note = '') {
+  return apiRequest(`/api/loans/access-requests/${id}/`, {
+    method: 'DELETE',
+    body: JSON.stringify({ note }),
+  })
+}
+
 // Loan-based report KPIs: { total, by_stage, by_status, by_source, by_officer, draws }.
 // Filters (all optional): start, end, officer, source, status, stage
 export async function fetchLoanReport(params = {}) {

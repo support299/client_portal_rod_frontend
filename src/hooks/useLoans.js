@@ -17,6 +17,7 @@ function toDashboardLoan(loan) {
   const name = loan.name || `Loan #${loan.id}`
   return {
     id: loan.id,
+    loanNumber: loan.loan_number,
     address: name,
     loanName: name,
     statusKey: loan.status,

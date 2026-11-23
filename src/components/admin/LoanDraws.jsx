@@ -411,7 +411,7 @@ function RowMenu({ label, items }) {
 }
 
 // One line per draw with its next step; details, files, forms and history show when expanded
-function DrawRow({ loanId, draw, isAdmin, expanded, onExpandedChange, onChanged, onError }) {
+function DrawRow({ loanId, draw, isAdmin, readOnly, expanded, onExpandedChange, onChanged, onError }) {
   // null, 'status' or 'details'
   const [panel, setPanel] = useState(null)
   const [moveTo, setMoveTo] = useState(null)
@@ -522,7 +522,7 @@ function DrawRow({ loanId, draw, isAdmin, expanded, onExpandedChange, onChanged,
               {next[1]}
             </button>
           )}
-          <RowMenu label={`Actions for Draw #${draw.number}`} items={menuItems} />
+          {!readOnly && <RowMenu label={`Actions for Draw #${draw.number}`} items={menuItems} />}
         </div>
       </div>
 
@@ -574,7 +574,8 @@ const newestFirst = (list) => [...(list ?? [])].sort((a, b) => b.number - a.numb
 
 // initial ({ draws, summary }, from the loan page's single call) skips the first fetch;
 // changes reload from the draws endpoints
-export default function LoanDraws({ loanId, initial }) {
+// readOnly: the viewer was granted read-only access to the loan, so no new draws or holdback edits
+export default function LoanDraws({ loanId, initial, readOnly = false }) {
   const { user } = useAuth()
   const [draws, setDraws] = useState(() => newestFirst(initial?.draws))
   const [summary, setSummary] = useState(initial?.summary ?? null)
@@ -630,6 +631,7 @@ export default function LoanDraws({ loanId, initial }) {
       loanId={loanId}
       draw={draw}
       isAdmin={user?.role === 'admin'}
+      readOnly={readOnly}
       expanded={expanded.has(draw.id)}
       onExpandedChange={(open) => setRowExpanded(draw.id, open)}
       onChanged={load}
@@ -651,7 +653,7 @@ export default function LoanDraws({ loanId, initial }) {
           <div className="flex flex-wrap items-center gap-1.5 text-sm">
             <span className="text-slate-500">Construction holdback</span>
             {hasHoldback && <span className="font-semibold tabular-nums text-slate-900">{money(summary.holdback)}</span>}
-            <HoldbackForm loanId={loanId} summary={summary} onSaved={load} />
+            {!readOnly && <HoldbackForm loanId={loanId} summary={summary} onSaved={load} />}
           </div>
           {hasHoldback ? (
             <p className="text-xs text-slate-500">
@@ -707,7 +709,7 @@ export default function LoanDraws({ loanId, initial }) {
                   )
                 })}
             </div>
-            {!creating && (
+            {!creating && !readOnly && (
               <button type="button" onClick={() => setCreating(true)} className={primaryButton}>
                 <Plus className="h-4 w-4" />
                 New draw

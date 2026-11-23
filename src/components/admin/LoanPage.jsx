@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Check, ClipboardList, Copy, Mail, MessageSquare, Pencil, Phone, X } from 'lucide-react'
+import { ArrowLeft, Check, ClipboardList, Copy, Eye, Mail, MessageSquare, Pencil, Phone, X } from 'lucide-react'
 import { fetchLoanPage } from '../../api/admin'
 import { fetchLoanChat } from '../../api/chats'
 import { useAuth } from '../../common/auth/AuthContext'
@@ -12,6 +12,7 @@ import LoanDocuments from './LoanDocuments'
 import LoanDraws from './LoanDraws'
 import LoanNotes from './LoanNotes'
 import { EditLoanForm, StatusBadge } from './LoansSection'
+import RequestAccessCard from './RequestAccessCard'
 import { TaskModal } from './TasksSection'
 
 // In-page sections, in order; /admin/loans/12#draws scrolls to one
@@ -239,16 +240,22 @@ export default function LoanPage() {
   // The rest of the single page call; each section takes its part and refreshes itself after that
   const [page, setPage] = useState(null)
   const [error, setError] = useState('')
+  // The 403 body when the loan exists but the viewer isn't on it: {loan, pending_request}
+  const [accessDenied, setAccessDenied] = useState(null)
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [chatError, setChatError] = useState('')
   const [creatingTask, setCreatingTask] = useState(false)
+  // Read-only grantees asking for full access from the page header
+  const [upgrading, setUpgrading] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     setLoan(null)
     setPage(null)
     setError('')
+    setAccessDenied(null)
+    setUpgrading(false)
     fetchLoanPage(loanId)
       .then((data) => {
         if (cancelled) return
@@ -260,7 +267,11 @@ export default function LoanPage() {
           notes: data.notes,
         })
       })
-      .catch((err) => !cancelled && setError(errorMessage(err)))
+      .catch((err) => {
+        if (cancelled) return
+        if (err.status === 403 && err.data?.code === 'loan_access_required') setAccessDenied(err.data)
+        else setError(errorMessage(err))
+      })
     return () => {
       cancelled = true
     }
@@ -282,6 +293,25 @@ export default function LoanPage() {
     }
   }
 
+  if (!loan && accessDenied) {
+    return (
+      <div className="space-y-6">
+        <Link
+          to="/admin/loans"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-700"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Loans
+        </Link>
+        <RequestAccessCard
+          loan={accessDenied.loan}
+          pendingRequest={accessDenied.pending_request}
+          onChanged={(pending) => setAccessDenied((d) => ({ ...d, pending_request: pending }))}
+        />
+      </div>
+    )
+  }
+
   if (!loan) {
     return (
       <div className={`${card} text-center text-sm`}>
@@ -300,6 +330,8 @@ export default function LoanPage() {
   }
 
   const officers = loan.loan_officers ?? (loan.loan_officer ? [loan.loan_officer] : [])
+  const readOnly = Boolean(loan.read_only)
+  const loanLabel = loan.loan_number || `Loan #${loan.id}`
   const facts = [
     ['Loan amount', money(loan.loan_amount)],
     ['Holdback', money(loan.holdback_amount)],
@@ -320,22 +352,37 @@ export default function LoanPage() {
       <header id="overview" className={`${card} scroll-mt-20`}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-slate-900">{loan.name || `Loan #${loan.id}`}</h1>
+            <h1 className="text-xl font-bold text-slate-900">{loan.name || loanLabel}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
               <StatusBadge loan={loan} />
-              <span>Loan #{loan.id}</span>
+              <span className="font-medium tabular-nums text-slate-600">{loanLabel}</span>
               {loan.pipeline_name && <span>&middot; {loan.pipeline_name}</span>}
+              {readOnly && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">
+                  <Eye className="h-3 w-3" />
+                  Read-only access
+                  <button
+                    type="button"
+                    onClick={() => setUpgrading((v) => !v)}
+                    className="ml-1 font-semibold text-emerald-700 hover:underline"
+                  >
+                    Request full access
+                  </button>
+                </span>
+              )}
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCreatingTask(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-            >
-              <ClipboardList className="h-3.5 w-3.5" />
-              New task
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => setCreatingTask(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                <ClipboardList className="h-3.5 w-3.5" />
+                New task
+              </button>
+            )}
             <button
               type="button"
               onClick={openChat}
@@ -344,7 +391,7 @@ export default function LoanPage() {
               <MessageSquare className="h-3.5 w-3.5" />
               Loan chat
             </button>
-            {!editing && (
+            {!editing && !readOnly && (
               <button
                 type="button"
                 onClick={() => setEditing(true)}
@@ -357,6 +404,17 @@ export default function LoanPage() {
           </div>
         </div>
         {chatError && <p className="mt-3 text-sm text-red-600">{chatError}</p>}
+
+        {upgrading && (
+          <div className="mt-5 border-t border-slate-100 pt-5">
+            <RequestAccessCard
+              loan={{ id: loan.id, loan_number: loan.loan_number, name: loan.name }}
+              upgrade
+              onChanged={() => setUpgrading(false)}
+              onCancel={() => setUpgrading(false)}
+            />
+          </div>
+        )}
 
         <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-slate-100 pt-5 sm:grid-cols-4">
           {facts.map(([label, value]) => (
@@ -418,11 +476,11 @@ export default function LoanPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="min-w-0 space-y-6 lg:col-span-2 xl:col-span-1">
           <Section id="draws" title="Draw Requests">
-            <LoanDraws loanId={loan.id} initial={page.draws} />
+            <LoanDraws loanId={loan.id} initial={page.draws} readOnly={readOnly} />
           </Section>
 
           <Section id="documents" title="Documents">
-            <LoanDocuments loanId={loan.id} initial={page.documents} />
+            <LoanDocuments loanId={loan.id} initial={page.documents} readOnly={readOnly} />
           </Section>
 
           <Section id="details" title="Loan & Contact Details">
@@ -447,14 +505,14 @@ export default function LoanPage() {
           </Section>
 
           <Section id="notes" title="Internal Notes">
-            <LoanNotes loanId={loan.id} initialNotes={page.notes} />
+            <LoanNotes loanId={loan.id} initialNotes={page.notes} readOnly={readOnly} />
           </Section>
         </div>
       </div>
 
       {creatingTask && (
         <TaskModal
-          initialLoan={{ id: loan.id, name: loan.name || `Loan #${loan.id}` }}
+          initialLoan={{ id: loan.id, name: loan.name || loanLabel }}
           onClose={() => setCreatingTask(false)}
           onSaved={() => setCreatingTask(false)}
         />

@@ -1,6 +1,7 @@
 import { Menu } from 'lucide-react'
 import NotificationBell from '../NotificationBell'
 import UserMenu from '../UserMenu'
+import { adminProfileMenuSections } from '../../common/constants/adminNav'
 
 export default function AdminTopbar({ onMenuClick }) {
   return (
@@ -18,7 +19,7 @@ export default function AdminTopbar({ onMenuClick }) {
 
       <div className="flex items-center gap-3 sm:gap-4">
         <NotificationBell />
-        <UserMenu showDetails />
+        <UserMenu showDetails links={adminProfileMenuSections} />
       </div>
     </header>
   )

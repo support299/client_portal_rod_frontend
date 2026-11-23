@@ -155,7 +155,8 @@ function NoteCard({ loanId, note, onChanged, onError }) {
  * A loan's internal notes for staff: add, pin, edit and delete. Pinned notes come first.
  * initialNotes (from the loan page's single call) skips the first fetch; changes reload from the notes endpoint.
  */
-export default function LoanNotes({ loanId, initialNotes }) {
+// readOnly: the viewer was granted read-only access to the loan, so no adding or editing
+export default function LoanNotes({ loanId, initialNotes, readOnly = false }) {
   const [notes, setNotes] = useState(initialNotes ?? [])
   const [loading, setLoading] = useState(!initialNotes)
   const [error, setError] = useState('')
@@ -177,7 +178,7 @@ export default function LoanNotes({ loanId, initialNotes }) {
 
   return (
     <div className="space-y-4">
-      <NewNoteForm loanId={loanId} onCreated={load} />
+      {!readOnly && <NewNoteForm loanId={loanId} onCreated={load} />}
 
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">

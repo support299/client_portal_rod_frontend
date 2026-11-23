@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ExternalLink, Mail, Pencil, Phone, Search, X } from 'lucide-react'
+import { ExternalLink, Eye, KeyRound, Mail, Pencil, Phone, Search, X } from 'lucide-react'
 import {
   fetchLoan,
   fetchLoanStages,
@@ -16,8 +16,12 @@ import { currency, formatDate } from '../../utils/format'
 import { DetailGroup, DetailRow } from './DetailList'
 import LoanDocuments from './LoanDocuments'
 import LoanDraws from './LoanDraws'
+import RequestAccessModal from './RequestAccessModal'
 
 const PAGE_SIZE = 25
+
+// The readable file number, falling back to the id for loans numbered before it existed
+const loanNumber = (loan) => loan.loan_number || `Loan #${loan.id}`
 
 // The deal's GHL status; by default lost and abandoned deals stay out of the list
 const DEAL_STATUS_OPTIONS = [
@@ -512,7 +516,7 @@ function LoanPanel({ loan, stages, mode, canReassign, onModeChange, onClose, onS
       <aside
         role="dialog"
         aria-modal="true"
-        aria-label={loan.name || `Loan #${loan.id}`}
+        aria-label={loan.name || loanNumber(loan)}
         className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -520,11 +524,11 @@ function LoanPanel({ loan, stages, mode, canReassign, onModeChange, onClose, onS
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-slate-900">
               {mode === 'edit' ? 'Edit ' : ''}
-              {loan.name || `Loan #${loan.id}`}
+              {loan.name || loanNumber(loan)}
             </h2>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
               <StatusBadge loan={loan} />
-              <span>Loan #{loan.id}</span>
+              <span className="font-medium tabular-nums text-slate-600">{loanNumber(loan)}</span>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1">
@@ -536,7 +540,12 @@ function LoanPanel({ loan, stages, mode, canReassign, onModeChange, onClose, onS
               <ExternalLink className="h-3.5 w-3.5" />
               Full page
             </Link>
-            {mode === 'view' && tab === 'details' && (
+            {mode === 'view' && tab === 'details' && loan.read_only && (
+              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                Read-only
+              </span>
+            )}
+            {mode === 'view' && tab === 'details' && !loan.read_only && (
               <button
                 type="button"
                 onClick={() => onModeChange('edit')}
@@ -580,9 +589,9 @@ function LoanPanel({ loan, stages, mode, canReassign, onModeChange, onClose, onS
 
         <div className="flex-1 overflow-y-auto p-5 sm:p-6">
           {mode === 'view' && tab === 'documents' ? (
-            <LoanDocuments loanId={loan.id} />
+            <LoanDocuments loanId={loan.id} readOnly={Boolean(loan.read_only)} />
           ) : mode === 'view' && tab === 'draws' ? (
-            <LoanDraws loanId={loan.id} />
+            <LoanDraws loanId={loan.id} readOnly={Boolean(loan.read_only)} />
           ) : mode === 'edit' ? (
             <EditLoanForm
               loan={loan}
@@ -676,6 +685,8 @@ export default function LoansSection() {
   const [error, setError] = useState('')
   const [selectedId, setSelectedId] = useState(null)
   const [panelMode, setPanelMode] = useState('view')
+  // The Request access search, for staff who only see their own loans
+  const [requestingAccess, setRequestingAccess] = useState(false)
   const [stages, setStages] = useState([])
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -755,7 +766,7 @@ export default function LoansSection() {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search loan name or borrower email"
+            placeholder="Search loan number, name or borrower email"
             className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm focus:border-emerald-400 focus:outline-none"
           />
         </div>
@@ -805,6 +816,17 @@ export default function LoansSection() {
             ))}
           </select>
         )}
+        {!canReassign && (
+          <button
+            type="button"
+            onClick={() => setRequestingAccess(true)}
+            className="ml-auto flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+            title="Ask a loan's team to let you see a loan you're not on"
+          >
+            <KeyRound className="h-4 w-4" />
+            Request access
+          </button>
+        )}
       </div>
 
       {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
@@ -847,10 +869,10 @@ export default function LoansSection() {
                       }}
                       className="text-left font-semibold text-slate-900 hover:text-emerald-700 focus:outline-none focus-visible:underline"
                     >
-                      {loan.name || `Loan #${loan.id}`}
+                      {loan.name || loanNumber(loan)}
                     </button>
                     <p className="text-xs text-slate-400">
-                      #{loan.id}
+                      <span className="tabular-nums">{loanNumber(loan)}</span>
                       {loan.stage_name ? ` · ${loan.stage_name}` : ''}
                     </p>
                   </td>
@@ -876,17 +898,23 @@ export default function LoansSection() {
                   <td className="whitespace-nowrap px-3 py-3 text-slate-600">{formatDate(loan.expected_close_date) || '—'}</td>
                   <td className="whitespace-nowrap px-3 py-3 text-slate-600">{formatDate(loan.created_at) || '—'}</td>
                   <td className="px-5 py-2 text-right sm:px-6">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        openLoan(loan, 'edit')
-                      }}
-                      aria-label={`Edit ${loan.name || `loan #${loan.id}`}`}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
+                    {loan.read_only ? (
+                      <span className="inline-flex h-8 w-8 items-center justify-center text-slate-300" title="Read-only access">
+                        <Eye className="h-4 w-4" />
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openLoan(loan, 'edit')
+                        }}
+                        aria-label={`Edit ${loan.name || loanNumber(loan)}`}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -932,6 +960,8 @@ export default function LoansSection() {
           onSaved={(saved) => setLoans((list) => list.map((l) => (l.id === saved.id ? saved : l)))}
         />
       )}
+
+      {requestingAccess && <RequestAccessModal onClose={() => setRequestingAccess(false)} />}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, Banknote, CheckCheck, FileText, UserPlus } from 'lucide-react'
+import { Bell, Banknote, CheckCheck, FileText, KeyRound, UserPlus } from 'lucide-react'
 import {
   fetchNotifications, fetchUnreadCount, markAllNotificationsRead, markNotificationRead,
 } from '../api/notifications'
@@ -19,7 +19,14 @@ const kinds = {
   document_uploaded: [FileText, 'bg-blue-100 text-blue-700', 'documents', 'documents'],
   document_reviewed: [FileText, 'bg-blue-100 text-blue-700', 'documents', 'documents'],
   loan_assigned: [UserPlus, 'bg-indigo-100 text-indigo-700', 'dashboard', 'overview'],
+  access_requested: [KeyRound, 'bg-rose-100 text-rose-700', 'dashboard', 'overview'],
+  access_granted: [KeyRound, 'bg-emerald-100 text-emerald-700', 'dashboard', 'overview'],
+  access_denied: [KeyRound, 'bg-slate-100 text-slate-600', 'dashboard', 'overview'],
+  access_revoked: [KeyRound, 'bg-slate-100 text-slate-600', 'dashboard', 'overview'],
 }
+
+// Staff: these lead to the Access requests page rather than the loan (which the reader may not see)
+const accessPageKinds = ['access_requested', 'access_denied', 'access_revoked']
 
 function NotificationItem({ notification, onOpen }) {
   const [Icon, iconClasses] = kinds[notification.kind] ?? [Bell, 'bg-slate-100 text-slate-500']
@@ -128,6 +135,10 @@ export default function NotificationBell() {
       markNotificationRead(notification.id)
         .then((data) => setUnread(data?.unread_count ?? 0))
         .catch(() => {})
+    }
+    if (!isBorrower && accessPageKinds.includes(notification.kind)) {
+      navigate('/admin/access-requests')
+      return
     }
     if (notification.loan == null) return
     const [, , section, tab] = kinds[notification.kind] ?? []

@@ -598,7 +598,8 @@ const withoutRequest = (files) => (files ?? []).filter((f) => !f.request)
 // The Documents tab of the loan panel: requests as compact rows grouped by category, then other files.
 // initial ({ requests, documents, types }, from the loan page's single call) skips the first fetch;
 // changes reload from the documents endpoints.
-export default function LoanDocuments({ loanId, initial }) {
+// readOnly: the viewer was granted read-only access to the loan, so no requesting or uploading
+export default function LoanDocuments({ loanId, initial, readOnly = false }) {
   const [requests, setRequests] = useState(initial?.requests ?? [])
   const [otherFiles, setOtherFiles] = useState(() => withoutRequest(initial?.documents))
   const [types, setTypes] = useState(initial?.types ?? [])
@@ -679,20 +680,22 @@ export default function LoanDocuments({ loanId, initial }) {
         ) : (
           <p className="text-sm text-slate-500">No requests yet</p>
         )}
-        <div className="flex gap-2">
-          <button type="button" onClick={() => setAdding('request')} className={primaryButton}>
-            <FilePlus2 className="h-4 w-4" />
-            Request document
-          </button>
-          <button
-            type="button"
-            onClick={() => setAdding('file')}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-          >
-            <Upload className="h-4 w-4" />
-            Upload file
-          </button>
-        </div>
+        {!readOnly && (
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setAdding('request')} className={primaryButton}>
+              <FilePlus2 className="h-4 w-4" />
+              Request document
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdding('file')}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+            >
+              <Upload className="h-4 w-4" />
+              Upload file
+            </button>
+          </div>
+        )}
       </div>
 
       {error && (

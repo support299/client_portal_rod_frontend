@@ -71,6 +71,22 @@ export const taskStatusStyles = {
   Done: 'bg-emerald-100 text-emerald-700',
 }
 
+// Keyed by LoanAccessRequest.Level: [label, badge classes]
+export const accessLevelStyles = {
+  read: ['Read-only', 'bg-slate-100 text-slate-600'],
+  write: ['Full access', 'bg-emerald-100 text-emerald-700'],
+}
+
+export const accessLevelLabel = (level) => accessLevelStyles[level]?.[0] ?? level
+
+// Keyed by LoanAccessRequest.Status
+export const accessStatusStyles = {
+  pending: ['Pending', 'bg-amber-100 text-amber-800'],
+  approved: ['Approved', 'bg-emerald-100 text-emerald-700'],
+  denied: ['Denied', 'bg-red-100 text-red-700'],
+  revoked: ['Revoked', 'bg-slate-100 text-slate-500'],
+}
+
 export const taskPriorityStyles = {
   High: 'bg-red-100 text-red-700',
   Medium: 'bg-amber-100 text-amber-800',

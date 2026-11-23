@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { X } from 'lucide-react'
-import { adminNavSections } from '../../common/constants/adminNav'
+import { adminSidebarSections } from '../../common/constants/adminNav'
 import logo from '../../assets/flip-funding-logo-light.svg'
 
 function AdminSidebarContent({ onNavigate }) {
@@ -12,7 +12,7 @@ function AdminSidebarContent({ onNavigate }) {
 
       <nav className="flex-1 overflow-y-auto px-3 pb-4">
         <ul className="space-y-1">
-          {adminNavSections.map(({ id, label, icon: Icon, path }) => (
+          {adminSidebarSections.map(({ id, label, icon: Icon, path }) => (
             <li key={id}>
               <NavLink
                 to={path}

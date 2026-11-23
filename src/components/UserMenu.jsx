@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { NavLink } from 'react-router-dom'
 import { LogOut, User } from 'lucide-react'
 import { useAuth } from '../common/auth/AuthContext'
 
@@ -16,8 +17,9 @@ function Avatar({ name, avatar }) {
 
 // Top-right profile avatar. Clicking it opens a small menu with the signed-in
 // user's email and a sign-out button. `showDetails` also renders the name and
-// role beside the avatar on wider screens (used by the staff console).
-export default function UserMenu({ showDetails = false }) {
+// role beside the avatar on wider screens (used by the staff console). `links`
+// ({ id, label, icon, path }[]) adds navigation items above the sign-out button.
+export default function UserMenu({ showDetails = false, links = [] }) {
   const { user, logout } = useAuth()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -71,6 +73,26 @@ export default function UserMenu({ showDetails = false }) {
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Signed in as</p>
             <p className="mt-0.5 break-all text-sm font-medium text-slate-900">{email || '—'}</p>
           </div>
+          {links.length > 0 && (
+            <div className="border-b border-slate-100 py-1">
+              {links.map(({ id, label, icon: Icon, path }) => (
+                <NavLink
+                  key={id}
+                  to={path}
+                  role="menuitem"
+                  onClick={() => setOpen(false)}
+                  className={({ isActive }) =>
+                    `flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium hover:bg-slate-50 ${
+                      isActive ? 'text-emerald-700' : 'text-slate-700'
+                    }`
+                  }
+                >
+                  {Icon && <Icon className="h-4 w-4 text-slate-500" />}
+                  {label}
+                </NavLink>
+              ))}
+            </div>
+          )}
           <button
             type="button"
             role="menuitem"

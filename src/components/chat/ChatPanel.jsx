@@ -790,6 +790,11 @@ function ChatThread({
         </div>
       )}
 
+      {chat.read_only ? (
+        <p className="border-t border-slate-100 px-5 py-4 text-center text-xs text-slate-500">
+          You have read-only access to this loan, so you can follow the conversation but not post in it.
+        </p>
+      ) : (
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -869,6 +874,7 @@ function ChatThread({
         </div>
         <p className="mt-1.5 text-[11px] text-slate-400">Enter to send, Shift+Enter for a new line.</p>
       </form>
+      )}
     </div>
   )
 }

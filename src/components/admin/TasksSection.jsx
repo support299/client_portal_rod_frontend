@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Banknote, CircleCheck, ClipboardList, FileCheck2, FileText, Pencil, Plus, RefreshCw, Trash2, X,
+  Banknote, Check, CircleCheck, ClipboardList, FileCheck2, FileText, KeyRound, Pencil, Plus, RefreshCw, Trash2, X,
 } from 'lucide-react'
 import {
-  createStaffTask, deleteStaffTask, fetchLoans, fetchTasks, fetchUsers, updateStaffTask,
+  createStaffTask, decideAccessRequest, deleteStaffTask, fetchLoans, fetchTasks, fetchUsers, updateStaffTask,
 } from '../../api/admin'
 import { useAuth } from '../../common/auth/AuthContext'
+import { accessLevelStyles } from '../../common/constants/uiStyles'
 import { DocumentRow } from './LoanDocuments'
 import { drawStatusLabel, money } from '../../utils/draws'
 import { errorMessage } from '../../utils/errors'
@@ -18,6 +19,7 @@ const taskTypes = {
   file_review: [FileText, 'bg-violet-50 text-violet-600', 'documents'],
   draw_review: [Banknote, 'bg-amber-50 text-amber-600', 'draws'],
   manual: [ClipboardList, 'bg-emerald-50 text-emerald-600', 'overview'],
+  access_request: [KeyRound, 'bg-rose-50 text-rose-600', 'overview'],
 }
 
 const typeFilters = [
@@ -25,6 +27,7 @@ const typeFilters = [
   { id: 'documents', label: 'Documents', match: (t) => t.type === 'document_review' || t.type === 'file_review' },
   { id: 'draws', label: 'Draws', match: (t) => t.type === 'draw_review' },
   { id: 'todos', label: 'To-dos', match: (t) => t.type === 'manual' },
+  { id: 'access', label: 'Access', match: (t) => t.type === 'access_request' },
 ]
 
 const chip = (active) =>
@@ -44,6 +47,9 @@ function LoanLine({ task, children }) {
       {task.loan && (
         <>
           <Link to={`/admin/loans/${task.loan.id}#${section}`} className="font-semibold text-emerald-700 hover:underline">
+            {task.loan.loan_number && task.loan.loan_number !== task.loan.name && (
+              <span className="tabular-nums">{task.loan.loan_number} · </span>
+            )}
             {task.loan.name}
           </Link>
           {task.loan.borrower && <> &middot; {task.loan.borrower}</>}
@@ -306,6 +312,39 @@ function OpenTask({ task, onChanged, onError, onEdit }) {
           </div>
         )}
 
+        {task.type === 'access_request' && (
+          <div className="flex items-center gap-2">
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${accessLevelStyles[task.requested_level]?.[1] ?? ''}`}>
+              {accessLevelStyles[task.requested_level]?.[0] ?? task.requested_level}
+            </span>
+            <Link
+              to="/admin/access-requests"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+              title="Approve with a different level, or add a note"
+            >
+              Details
+            </Link>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => run(() => decideAccessRequest(task.access_request, 'deny'))}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+            >
+              <X className="h-3.5 w-3.5" />
+              Deny
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => run(() => decideAccessRequest(task.access_request, 'approve'))}
+              className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+            >
+              <Check className="h-3.5 w-3.5" />
+              Approve
+            </button>
+          </div>
+        )}
+
         {task.type === 'manual' && (
           <div className="flex items-center gap-2">
             {task.due_date && (
@@ -353,6 +392,9 @@ function OpenTask({ task, onChanged, onError, onEdit }) {
 
       {task.type === 'manual' && task.note && (
         <p className="mt-3 whitespace-pre-wrap text-xs text-slate-500 sm:pl-12">{task.note}</p>
+      )}
+      {task.type === 'access_request' && task.message && (
+        <p className="mt-3 whitespace-pre-wrap text-xs text-slate-500 sm:pl-12">“{task.message}”</p>
       )}
       {task.files?.length > 0 && (
         <ul className="mt-3 divide-y divide-slate-100 border-t border-slate-100 sm:pl-12">
@@ -485,8 +527,8 @@ export default function TasksSection() {
           {view === 'open' && (
             <p className="mt-1 max-w-sm text-sm text-slate-500">
               When a borrower uploads a requested document or submits a draw on
-              {scope === 'all' ? ' any loan' : ' one of your loans'}, or a task is assigned to
-              {scope === 'all' ? ' anyone' : ' you'}, it shows up here.
+              {scope === 'all' ? ' any loan' : ' one of your loans'}, a task is assigned to
+              {scope === 'all' ? ' anyone' : ' you'}, or a teammate asks to see one of your loans, it shows up here.
             </p>
           )}
         </div>
@@ -501,7 +543,9 @@ export default function TasksSection() {
           {tasks.map((task) => (
             <li key={task.id} className="flex items-start gap-3 py-3">
               <CircleCheck
-                className={`mt-0.5 h-4 w-4 shrink-0 ${task.outcome === 'rejected' ? 'text-red-500' : 'text-emerald-500'}`}
+                className={`mt-0.5 h-4 w-4 shrink-0 ${
+                  task.outcome === 'rejected' || task.outcome === 'denied' ? 'text-red-500' : 'text-emerald-500'
+                }`}
               />
               <div className="min-w-0">
                 <p className="text-sm font-medium text-slate-900">{task.title}</p>
