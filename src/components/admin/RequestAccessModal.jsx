@@ -34,19 +34,19 @@ function LoanRow({ loan, onRequested, onClose }) {
 
   return (
     <li className="px-5 py-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-900">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="break-words text-sm font-semibold text-slate-900">
             <span className="tabular-nums">{label}</span>
             {loan.name && loan.name !== label && <span className="font-medium text-slate-700"> · {loan.name}</span>}
           </p>
-          <p className="mt-0.5 text-xs text-slate-500">
+          <p className="mt-0.5 break-words text-xs text-slate-500">
             {[loan.borrower_name, loan.stage_name, loan.officer_names?.length ? `Team: ${loan.officer_names.join(', ')}` : 'Unassigned']
               .filter(Boolean)
               .join(' · ')}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
           {loan.has_access && (
             <>
               {loan.access_level && loan.access_level !== 'officer' && (
